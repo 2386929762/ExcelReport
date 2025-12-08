@@ -313,7 +313,11 @@
                     try {
                         if (!sdk) await initializeSdkAndLogin();
                         if (sdk && sdk.api) {
-                            const res = await sdk.api.queryFormDataList({ panelCode: sdkConfig.panelCode });
+                            const res = await sdk.api.queryFormDataList({
+                                panelCode: sdkConfig.panelCode,
+                                pageNo: 1,
+                                pageSize: 200
+                            });
                             if (res?.data?.list) {
                                 finalData = res.data.list;
                             }
@@ -366,6 +370,9 @@
                             console.warn("Error parsing JSON config:", e);
                         }
                         
+                        // 将节点编号添加到配置中作为reportCode
+                        configData.reportCode = node['编号'];
+                        
                         console.log('通过postMessage发送配置数据给iframe:', configData);
 
                         // 根据节点类型发送不同的消息类型
@@ -412,6 +419,9 @@
                                     console.warn("解析JSON配置失败:", e);
                                     configData = {};
                                 }
+                                
+                                // 将节点编号添加到配置中作为reportCode
+                                configData.reportCode = node['编号'];
                                 
                                 // 延迟发送消息到iframe，确保iframe已加载
                                 nextTick(() => {

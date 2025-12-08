@@ -15,9 +15,9 @@
 <body>
 
     <!-- 标题栏 -->
-    <div class="header">
+    <!-- <div class="header">
         <span>报表明细</span>
-    </div>
+    </div> -->
 
     <!-- 主体容器 -->
     <div class="main-container">
@@ -37,8 +37,11 @@
                         <select id="datasource-select" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;">
                             <option value="">请选择数据源</option>
                         </select>
-                        <select id="table-select" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;" disabled>
+                        <select id="schema-select" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;" disabled>
                             <option value="">请先选择数据源</option>
+                        </select>
+                        <select id="table-select" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;" disabled>
+                            <option value="">请先选择Schema</option>
                         </select>
                     </div>
                 </div>
@@ -155,6 +158,15 @@
                         <button class="toolbar-btn dropdown-toggle"><i class="fa fa-columns"></i></button>
                     </div>
                 </div>
+
+                <!-- 分隔线 -->
+                <div class="toolbar-divider"></div>
+
+                <!-- 行列操作区 -->
+                <div class="toolbar-group">
+                    <button class="toolbar-btn" id="add-row-btn" title="添加行"><i class="fa fa-plus"></i> 行</button>
+                    <button class="toolbar-btn" id="add-col-btn" title="添加列"><i class="fa fa-plus"></i> 列</button>
+                </div>
             </div>
 
             <!-- 单元格选中信息显示 -->
@@ -166,48 +178,9 @@
             </div>
 
             <!-- 设计区域 -->
-            <div class="design-area">
+            <div class="design-area" id="design-area">
                 <table id="design-table">
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th>A</th>
-                            <th>B</th>
-                            <th>C</th>
-                            <th>D</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>1</td>
-                            <td contenteditable="true"></td>
-                            <td contenteditable="true"></td>
-                            <td contenteditable="true"></td>
-                            <td contenteditable="true"></td>
-                        </tr>
-                        <tr>
-                            <td>2</td>
-                            <td contenteditable="true"></td>
-                            <td contenteditable="true"></td>
-                            <td contenteditable="true"></td>
-                            <td contenteditable="true"></td>
-                        </tr>
-                        <tr>
-                            <td>3</td>
-                            <td contenteditable="true"></td>
-                            <td contenteditable="true"></td>
-                            <td contenteditable="true"></td>
-                            <td contenteditable="true"></td>
-                        </tr>
-                        <tr>
-                            <td>4</td>
-                            <td contenteditable="true"></td>
-                            <td contenteditable="true"></td>
-                            <td contenteditable="true"></td>
-                            <td contenteditable="true"></td>
-                        </tr>
-
-                    </tbody>
+                    <!-- 表格将通过JavaScript动态生成 -->
                 </table>
             </div>
         </div>
@@ -223,18 +196,19 @@
                     <div class="info-group">
                         <label>单元格类型:</label>
                         <select id="cell-type">
+                            <option value="">请选择</option>
                             <option value="dimension">维度单元格</option>
-                            <option value="indicator" selected>指标单元格</option>
+                            <option value="indicator">指标单元格</option>
                             <option value="text">文本单元格</option>
                         </select>
                     </div>
                     <div class="info-group">
                         <label>单元格编号:</label>
-                        <input type="text" id="cell-id" value="B3" readonly>
+                        <input type="text" id="cell-id" value="" readonly>
                     </div>
                     <div class="info-group">
                         <label>来源指标:</label>
-                        <input type="text" id="cell-source" value="个人存款余额" readonly>
+                        <input type="text" id="cell-source" value="" readonly>
                     </div>
                     <div class="info-group">
                         <label>数据单位:</label>
@@ -248,9 +222,10 @@
                     <div class="info-group">
                         <label>显示精度:</label>
                         <select id="cell-precision">
-                            <option>0</option>
+                            <option value="">请选择</option>
+                            <option value="0">0</option>
                             <option value="1">1</option>
-                            <option value="2" selected>2</option>
+                            <option value="2">2</option>
                             <option value="3">3</option>
                             <option value="4">4</option>
                         </select>
@@ -258,7 +233,8 @@
                     <div class="info-group">
                         <label>计算规则:</label>
                         <select id="cell-calc-rule">
-                            <option value="today" selected>本日</option>
+                            <option value="">请选择</option>
+                            <option value="today">本日</option>
                             <option value="yesterday">昨日</option>
                             <option value="sum">求和</option>
                             <option value="avg">平均值</option>
@@ -268,7 +244,8 @@
                     <div class="info-group">
                         <label>时间度量:</label>
                         <select id="cell-time-unit">
-                            <option value="none" selected>无</option>
+                            <option value="">请选择</option>
+                            <option value="none">无</option>
                             <option value="day">日</option>
                             <option value="month">月</option>
                             <option value="quarter">季</option>
@@ -278,7 +255,8 @@
                     <div class="info-group">
                         <label>取值方式:</label>
                         <select id="cell-value-type">
-                            <option value="point" selected>时点</option>
+                            <option value="">请选择</option>
+                            <option value="point">时点</option>
                             <option value="period">时期</option>
                         </select>
                     </div>
@@ -412,6 +390,8 @@
             devDefaultBaseUrl: 'https://demo.kwaidoo.com/zbyth/process',
             busDomainCode: 'OctoCM_BDYTH'
         };
+        // 记录选中的字段
+        window.selectedCols = window.selectedCols || [];
 
         // 初始化SDK
         async function initializeSDK() {
@@ -497,7 +477,7 @@
         }
 
         // 根据数据源名称加载表列表
-        async function loadTablesByDataSource(datasourceName) {
+        async function loadTablesByDataSource(datasourceName, schemaName) {
             try {
                 if (!sdk) {
                     console.error('SDK未初始化');
@@ -515,7 +495,11 @@
                 console.log('表管理查询返回结果:', result);
 
                 if (result && result.state === '200' && result.data && result.data.list) {
-                    const tables = result.data.list.filter(table => table['数据源名称'] === datasourceName);
+                    let tables = result.data.list.filter(table => table['数据源名称'] === datasourceName);
+                    // 如果提供了schema,进一步过滤
+                    if (schemaName && tables.length > 0) {
+                        tables = tables.filter(table => table['模式名'] === schemaName);
+                    }
                     console.log('过滤后的表列表:', tables);
 
                     window.currentTables = tables;
@@ -540,6 +524,65 @@
                 }
             } catch (error) {
                 console.error('加载表列表失败:', error);
+            }
+        }
+
+        // 加载schema列表
+        async function loadSchemasByDataSource(datasourceName) {
+            try {
+                if (!sdk) {
+                    console.error('SDK未初始化');
+                    return;
+                }
+
+                const schemaSelect = document.getElementById('schema-select');
+                schemaSelect.innerHTML = '<option value="">加载中...</option>';
+                schemaSelect.disabled = true;
+                
+                console.log('开始查询数据源[' + datasourceName + ']的Schema列表...');
+                const params = {
+                    "panelCode": "IML_00003",
+                    "pageNo": 1,
+                    "pageSize": 100
+                };
+
+                const result = await sdk.api.queryFormDataList(params);
+                console.log('表管理查询返回结果:', result);
+
+                if (result && result.state === '200' && result.data && result.data.list) {
+                    // 过滤出属于当前数据源的表
+                    const tables = result.data.list.filter(table => table['数据源名称'] === datasourceName);
+                    console.log('当前数据源的表:', tables);
+                    
+                    // 提取唯一的schema名称
+                    const schemaSet = new Set();
+                    tables.forEach(table => {
+                        if (table['模式名']) {
+                            schemaSet.add(table['模式名']);
+                        }
+                    });
+                    
+                    const schemas = Array.from(schemaSet).sort();
+                    console.log('提取的Schema列表:', schemas);
+                    
+                    schemaSelect.innerHTML = '<option value="">请选择Schema</option>';
+                    schemas.forEach(schema => {
+                        const option = document.createElement('option');
+                        option.value = schema;
+                        option.textContent = schema;
+                        schemaSelect.appendChild(option);
+                    });
+                    schemaSelect.disabled = false;
+                    
+                    console.log('Schema列表已加载,共' + schemas.length + '个');
+                } else {
+                    console.error('表管理查询失败:', result);
+                    schemaSelect.innerHTML = '<option value="">加载失败</option>';
+                }
+            } catch (error) {
+                console.error('加载Schema列表失败:', error);
+                const schemaSelect = document.getElementById('schema-select');
+                schemaSelect.innerHTML = '<option value="">加载失败</option>';
             }
         }
 
@@ -631,22 +674,38 @@
                 
                 // 优先使用从postMessage传来的配置(存储在initialConfigToRestore中)
                 let configToUse = initialConfigToRestore?.detailReportConfig || window.currentNodeInfo?.config;
-                
+
+                // 恢复选中的字段
+                if (configToUse && configToUse.selectedCols) {
+                    window.selectedCols = configToUse.selectedCols || [];
+                    console.log('已恢复选中的字段:', window.selectedCols);
+                }
+
                 if (configToUse && configToUse.selectedDataSource) {
                     const datasourceSelect = document.getElementById('datasource-select');
                     const option = Array.from(datasourceSelect.options).find(opt => opt.value === configToUse.selectedDataSource);
                     if (option) {
                         datasourceSelect.value = configToUse.selectedDataSource;
                         console.log('已恢复数据源选择:', configToUse.selectedDataSource);
-                        await loadTablesByDataSource(configToUse.selectedDataSource);
+                        await loadSchemasByDataSource(configToUse.selectedDataSource);
                         
-                        if (configToUse.selectedTable) {
-                            const tableSelect = document.getElementById('table-select');
-                            const tableOption = Array.from(tableSelect.options).find(opt => opt.value === configToUse.selectedTable);
-                            if (tableOption) {
-                                tableSelect.value = configToUse.selectedTable;
-                                console.log('已恢复表选择:', configToUse.selectedTable);
-                                loadFieldsByTable(configToUse.selectedTable);
+                        if (configToUse.selectedSchema) {
+                            const schemaSelect = document.getElementById('schema-select');
+                            const schemaOption = Array.from(schemaSelect.options).find(opt => opt.value === configToUse.selectedSchema);
+                            if (schemaOption) {
+                                schemaSelect.value = configToUse.selectedSchema;
+                                console.log('已恢复Schema选择:', configToUse.selectedSchema);
+                                await loadTablesByDataSource(configToUse.selectedDataSource, configToUse.selectedSchema);
+                                
+                                if (configToUse.selectedTable) {
+                                    const tableSelect = document.getElementById('table-select');
+                                    const tableOption = Array.from(tableSelect.options).find(opt => opt.value === configToUse.selectedTable);
+                                    if (tableOption) {
+                                        tableSelect.value = configToUse.selectedTable;
+                                        console.log('已恢复表选择:', configToUse.selectedTable);
+                                        loadFieldsByTable(configToUse.selectedTable);
+                                    }
+                                }
                             }
                         }
                     }
@@ -657,22 +716,55 @@
                 const datasourceName = e.target.value;
                 console.log('选择数据源:', datasourceName);
                 
+                const schemaSelect = document.getElementById('schema-select');
                 const tableSelect = document.getElementById('table-select');
-                tableSelect.innerHTML = '<option value="">请先选择数据源</option>';
+                
+                schemaSelect.innerHTML = '<option value="">请先选择数据源</option>';
+                schemaSelect.disabled = true;
+                tableSelect.innerHTML = '<option value="">请先选择Schema</option>';
                 tableSelect.disabled = true;
                 document.getElementById('field-list-container').innerHTML = 
                     '<li style="text-align: center; color: #999; padding: 20px;">请选择表加载字段</li>';
                 
                 if (datasourceName) {
-                    await loadTablesByDataSource(datasourceName);
+                    await loadSchemasByDataSource(datasourceName);
                     
                     if (window.currentNodeInfo) {
                         if (!window.currentNodeInfo.config) {
                             window.currentNodeInfo.config = {};
                         }
                         window.currentNodeInfo.config.selectedDataSource = datasourceName;
+                        delete window.currentNodeInfo.config.selectedSchema;
                         delete window.currentNodeInfo.config.selectedTable;
+                        window.selectedCols = [];
                         console.log('已保存数据源选择:', datasourceName);
+                    }
+                }
+            });
+
+            document.getElementById('schema-select').addEventListener('change', async function(e) {
+                const schemaName = e.target.value;
+                console.log('选择Schema:', schemaName);
+                
+                const datasourceName = document.getElementById('datasource-select').value;
+                const tableSelect = document.getElementById('table-select');
+                
+                tableSelect.innerHTML = '<option value="">请先选择Schema</option>';
+                tableSelect.disabled = true;
+                document.getElementById('field-list-container').innerHTML = 
+                    '<li style="text-align: center; color: #999; padding: 20px;">请选择表加载字段</li>';
+                
+                if (schemaName && datasourceName) {
+                    await loadTablesByDataSource(datasourceName, schemaName);
+                    
+                    if (window.currentNodeInfo) {
+                        if (!window.currentNodeInfo.config) {
+                            window.currentNodeInfo.config = {};
+                        }
+                        window.currentNodeInfo.config.selectedSchema = schemaName;
+                        delete window.currentNodeInfo.config.selectedTable;
+                        window.selectedCols = [];
+                        console.log('已保存Schema选择:', schemaName);
                     }
                 }
             });
@@ -683,6 +775,8 @@
                 
                 if (tableName) {
                     loadFieldsByTable(tableName);
+                    // 清空之前选中的字段
+                    window.selectedCols = [];
                     
                     if (window.currentNodeInfo) {
                         if (!window.currentNodeInfo.config) {

@@ -60,7 +60,37 @@ function getCurrentDetailTableConfig() {
         }
     };
 
-    // 从表格中收集数据
+    // 判断单元格是否有配置内容
+    function isCellConfigured(cell, cellContent) {
+        const trimmedContent = cellContent.trim();
+        // 排除行号和列标题
+        if (trimmedContent === '' || /^[0-9]+$/.test(trimmedContent) || /^[A-Z]+$/.test(trimmedContent)) {
+            return false;
+        }
+        
+        // 检查是否有特殊类型
+        if (cell.dataset.type && cell.dataset.type !== 'text' && cell.dataset.type !== '') {
+            return true;
+        }
+        
+        // 检查是否有数据属性
+        for (let i = 0; i < cell.attributes.length; i++) {
+            const attr = cell.attributes[i];
+            if (attr.name.startsWith('data-') && attr.name !== 'data-type') {
+                return true;
+            }
+        }
+        
+        // 检查是否有显式设置的样式
+        if (cell.style.fontWeight && cell.style.fontWeight !== '') return true;
+        if (cell.style.fontSize && cell.style.fontSize !== '') return true;
+        if (cell.style.backgroundColor && cell.style.backgroundColor !== '') return true;
+        if (cell.style.color && cell.style.color !== '') return true;
+        
+        return false;
+    }
+
+    // 从表格中收集数据（只保存已配置的单元格）
     const table = document.getElementById('design-table');
     if (table) {
         const rows = table.querySelectorAll('tr');
@@ -68,26 +98,60 @@ function getCurrentDetailTableConfig() {
         rows.forEach((row, rowIndex) => {
             const rowData = [];
             const cells = row.querySelectorAll('td, th');
+            let rowHasConfiguredCells = false;
             
             cells.forEach((cell, cellIndex) => {
+                // 跳过行号列
+                if (cellIndex === 0 && cell.tagName === 'TD' && /^[0-9]+$/.test(cell.textContent.trim())) {
+                    return;
+                }
+                
                 // 获取单元格内容
                 const cellContent = cell.textContent || '';
                 
-                // 获取单元格样式
-                const computedStyle = window.getComputedStyle(cell);
+                // 只处理已配置的单元格
+                if (!isCellConfigured(cell, cellContent)) {
+                    return;
+                }
+                
+                rowHasConfiguredCells = true;
+                
+                // 只保存显式设置的样式
                 const cellData = {
                     value: cellContent.trim(),
                     type: cell.dataset.type || 'text',
-                    style: {
-                        fontWeight: computedStyle.fontWeight,
-                        fontSize: computedStyle.fontSize,
-                        textAlign: computedStyle.textAlign,
-                        backgroundColor: computedStyle.backgroundColor,
-                        color: computedStyle.color,
-                        fontStyle: computedStyle.fontStyle,
-                        textDecoration: computedStyle.textDecoration
-                    }
+                    rowIndex: rowIndex,
+                    cellIndex: cellIndex
                 };
+                
+                // 只保存显式设置的样式
+                const inlineStyles = {};
+                if (cell.style.fontWeight && cell.style.fontWeight !== '') {
+                    inlineStyles.fontWeight = cell.style.fontWeight;
+                }
+                if (cell.style.fontSize && cell.style.fontSize !== '') {
+                    inlineStyles.fontSize = cell.style.fontSize;
+                }
+                if (cell.style.textAlign && cell.style.textAlign !== '') {
+                    inlineStyles.textAlign = cell.style.textAlign;
+                }
+                if (cell.style.backgroundColor && cell.style.backgroundColor !== '') {
+                    inlineStyles.backgroundColor = cell.style.backgroundColor;
+                }
+                if (cell.style.color && cell.style.color !== '') {
+                    inlineStyles.color = cell.style.color;
+                }
+                if (cell.style.fontStyle && cell.style.fontStyle !== '') {
+                    inlineStyles.fontStyle = cell.style.fontStyle;
+                }
+                if (cell.style.textDecoration && cell.style.textDecoration !== '') {
+                    inlineStyles.textDecoration = cell.style.textDecoration;
+                }
+                
+                // 只有在有样式时才添加style属性
+                if (Object.keys(inlineStyles).length > 0) {
+                    cellData.style = inlineStyles;
+                }
 
                 // 如果是字段单元格，保存字段信息
                 if (cell.dataset.type === 'field') {
@@ -101,10 +165,14 @@ function getCurrentDetailTableConfig() {
                 rowData.push(cellData);
             });
             
-            tableConfig.tableData.push(rowData);
+            // 只有当行有配置的单元格时才添加到tableData
+            if (rowHasConfiguredCells) {
+                tableConfig.tableData.push(rowData);
+            }
         });
     }
-
+    
+    console.log(`收集到 ${tableConfig.tableData.length} 行已配置的明细表格数据`);
     return tableConfig;
 }
 

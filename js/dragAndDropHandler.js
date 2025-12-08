@@ -136,6 +136,15 @@ function addFieldToTable(cell, fieldName, tableName) {
     cell.dataset.name = fieldName;
     cell.dataset.table = tableName;
     
+    // 记录选中的字段到全局数组
+    if (!window.selectedCols) {
+        window.selectedCols = [];
+    }
+    if (!window.selectedCols.includes(fieldName)) {
+        window.selectedCols.push(fieldName);
+        console.log('已添加字段到selectedCols:', fieldName, '当前字段列表:', window.selectedCols);
+    }
+    
     // 添加内容变化监听器
     addContentChangeListener(cell);
 
@@ -159,11 +168,22 @@ function addContentChangeListener(cell) {
     const listener = function() {
         // 如果单元格内容被清空，移除相关元数据
         if (!this.textContent.trim()) {
+            const fieldName = this.dataset.name;
+            
             delete this.dataset.type;
             delete this.dataset.name;
             delete this.dataset.table;
             this.style.fontWeight = '';
             this.style.backgroundColor = '';
+            
+            // 从selectedCols中移除该字段
+            if (fieldName && window.selectedCols) {
+                const index = window.selectedCols.indexOf(fieldName);
+                if (index > -1) {
+                    window.selectedCols.splice(index, 1);
+                    console.log('已从selectedCols移除字段:', fieldName, '当前字段列表:', window.selectedCols);
+                }
+            }
         }
         
         // 检查是否是字段单元格，如果是，则更新表格字段

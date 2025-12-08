@@ -746,6 +746,9 @@ if (typeof saveButtonBound === 'undefined') {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // 初始化表格
+    initializeTable(20, 20);
+    
     // 初始化时加载所有单元格配置
     loadAllCellConfigurations();
 
@@ -760,6 +763,106 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// 初始化表格函数
+function initializeTable(rows = 20, cols = 20) {
+    const table = document.getElementById('design-table');
+    if (!table) {
+        console.error('找不到表格元素');
+        return;
+    }
+
+    // 清空现有表格
+    table.innerHTML = '';
+
+    // 创建表头行（列标题：A, B, C...）
+    const thead = table.createTHead();
+    const headerRow = thead.insertRow();
+    
+    // 添加左上角空单元格
+    const cornerCell = document.createElement('th');
+    cornerCell.style.width = '40px';
+    cornerCell.style.minWidth = '40px';
+    headerRow.appendChild(cornerCell);
+
+    // 生成列标题 (A, B, C, ..., Z, AA, AB, ...)
+    function getColumnLabel(index) {
+        let label = '';
+        while (index >= 0) {
+            label = String.fromCharCode(65 + (index % 26)) + label;
+            index = Math.floor(index / 26) - 1;
+        }
+        return label;
+    }
+
+    for (let i = 0; i < cols; i++) {
+        const th = document.createElement('th');
+        th.textContent = getColumnLabel(i);
+        th.style.minWidth = '120px';
+        headerRow.appendChild(th);
+    }
+
+    // 创建表体
+    const tbody = table.createTBody();
+    for (let i = 0; i < rows; i++) {
+        const row = tbody.insertRow();
+        
+        // 添加行号列
+        const rowNumCell = row.insertCell();
+        rowNumCell.textContent = i + 1;
+        rowNumCell.contentEditable = false;
+        rowNumCell.style.backgroundColor = '#f0f0f0';
+        rowNumCell.style.fontWeight = 'bold';
+        rowNumCell.style.textAlign = 'center';
+        rowNumCell.style.width = '40px';
+        rowNumCell.style.minWidth = '40px';
+
+        // 添加数据单元格
+        for (let j = 0; j < cols; j++) {
+            const cell = row.insertCell();
+            cell.contentEditable = true;
+            cell.style.minWidth = '120px';
+            
+            // 添加单元格点击事件
+            cell.addEventListener('click', function() {
+                // 自动保存当前选中单元格的配置（如果有）
+                if (currentSelectedCell && currentSelectedCell !== this) {
+                    console.log('自动保存前一个单元格配置');
+                    saveCellConfiguration();
+                }
+
+                // 移除所有单元格的选中状态
+                const allCells = table.querySelectorAll('td[contenteditable="true"]');
+                allCells.forEach(c => c.classList.remove('selected'));
+                
+                // 选中当前单元格
+                this.classList.add('selected');
+                currentSelectedCell = this;
+
+                // 更新右侧单元格信息
+                updateCellInfo(this);
+
+                // 更新选中单元格信息显示
+                updateCellSelectionInfo(this);
+            });
+
+            // 监听单元格内容变化
+            cell.addEventListener('input', function() {
+                if (this.classList.contains('selected')) {
+                    const inputElement = document.querySelector('.cell-content-input');
+                    if (inputElement) {
+                        inputElement.value = this.textContent || '';
+                    }
+                }
+            });
+        }
+    }
+
+    console.log(`表格初始化完成: ${rows}行 x ${cols}列`);
+}
+
+// 暴露函数到全局，供其他模块使用
+window.initializeTable = initializeTable;
 
 
 

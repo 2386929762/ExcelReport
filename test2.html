@@ -77,6 +77,16 @@
         }
         /* 避免 Vue 挂载前模板占位内容闪烁 (v-cloak) */
         [v-cloak] { display: none !important; }
+
+        /* 刷新闪烁动画 */
+        @keyframes flash-bg {
+            0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.0); }
+            50% { box-shadow: 0 0 12px 4px rgba(34,197,94,0.12); }
+            100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.0); }
+        }
+        .refresh-flash {
+            animation: flash-bg 0.6s ease-in-out;
+        }
     </style>
 </head>
 
@@ -107,15 +117,26 @@
             <aside
                 class="w-80 bg-white border-r border-gray-200 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-0">
                 <div class="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">目录结构</span>
-                    <button @click="openAddRootModal"
-                        class="text-xs bg-white border border-gray-200 hover:border-blue-500 hover:text-blue-600 text-gray-600 px-2 py-1 rounded transition-colors shadow-sm"
-                        title="添加根目录">
-                        <i class="fa-solid fa-plus"></i> 根节点
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">目录结构</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button @click="refreshTree" :disabled="refreshLoading"
+                            :class="['text-xs bg-white border px-2 py-1 rounded transition-colors shadow-sm', refreshLoading ? 'border-green-300 text-green-600' : 'border-gray-200 hover:border-green-500 hover:text-green-600 text-gray-600']"
+                            title="刷新目录">
+                            <i :class="refreshLoading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate-right'"></i>
+                            <span v-if="!refreshLoading"> 刷新</span>
+                            <span v-else> 刷新中</span>
+                        </button>
+                        <button @click="openAddRootModal"
+                            class="text-xs bg-white border border-gray-200 hover:border-blue-500 hover:text-blue-600 text-gray-600 px-2 py-1 rounded transition-colors shadow-sm"
+                            title="添加根目录">
+                            <i class="fa-solid fa-plus"></i> 根节点
+                        </button>
+                    </div>
                 </div>
 
-                <div class="flex-1 overflow-y-auto p-2 relative">
+                <div class="flex-1 overflow-y-auto p-2 relative" :class="{ 'refresh-flash': refreshLoading }">
                     <template v-if="treeData.length > 0">
                         <tree-node v-for="node in treeData" :key="node['编号']" :node="node" :selected-id="selectedNodeId"
                             @select="handleSelect" @add="openAddChildModal" @edit="openEditModal"
@@ -570,6 +591,7 @@
                     parentName: ''
                 });
                 const nameInput = ref(null);
+                const refreshLoading = ref(false);
 
                 // Confirm Dialog State
                 const showConfirmDialog = ref(false);
@@ -587,7 +609,11 @@
                     try {
                         if (!sdk) await initializeSdkAndLogin();
                         if (sdk && sdk.api) {
-                            const res = await sdk.api.queryFormDataList({ panelCode: sdkConfig.panelCode });
+                            const res = await sdk.api.queryFormDataList({
+                                panelCode: sdkConfig.panelCode,
+                                pageNo: 1,
+                                pageSize: 200
+                            });
                             if (res?.data?.list) {
                                 finalData = res.data.list;
                                 source = 'SDK 数据';
@@ -1041,6 +1067,26 @@
                     }
                 };
 
+                // 刷新树（调用 SDK 拉取最新数据，并清除当前选中）
+                const refreshTree = async () => {
+                    if (refreshLoading.value) return;
+                    try {
+                        refreshLoading.value = true;
+                        console.log('正在刷新目录树...');
+                        await loadData();
+                        selectedNodeId.value = null;
+                        rightPanelView.value = 'details';
+                        // 保持闪烁效果一段时间
+                        setTimeout(() => {
+                            refreshLoading.value = false;
+                            console.log('目录树刷新完成');
+                        }, 600);
+                    } catch (e) {
+                        refreshLoading.value = false;
+                        console.error('刷新目录树失败:', e);
+                    }
+                };
+
                 const getNodeIcon = (type) => {
                     if (type === '目录') return 'fa-regular fa-folder-open';
                     if (type === '指标报表') return 'fa-solid fa-chart-pie';
@@ -1073,6 +1119,7 @@
                     modalMode,
                     modalForm,
                     nameInput,
+                    refreshLoading,
                     // Confirm Dialog State
                     showConfirmDialog,
                     confirmDialogData,
@@ -1083,6 +1130,7 @@
                     showConfirm,
                     confirmAction,
                     cancelAction,
+                    refreshTree,
                     openAddRootModal,
                     openAddChildModal,
                     openEditModal,

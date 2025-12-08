@@ -121,59 +121,159 @@ function getCurrentTableConfig() {
     // 保存数据源和数据表选择(明细报表专用)
     const datasourceSelect = document.getElementById('datasource-select');
     const tableSelect = document.getElementById('table-select');
+    const schemaSelect = document.getElementById('schema-select');
     if (datasourceSelect && tableSelect) {
         tableConfig.detailReportConfig = {
             selectedDataSource: datasourceSelect.value || '',
-            selectedTable: tableSelect.value || ''
+            selectedTable: tableSelect.value || '',
+            selectedSchema: schemaSelect ? (schemaSelect.value || '') : '',
+            selectedCols: window.selectedCols || []
         };
         console.log('保存明细报表配置:', tableConfig.detailReportConfig);
     }
     
-    // 从全局window.cellConfigurations复制单元格配置
+    // 从全局window.cellConfigurations复制单元格配置（只保存非空的配置）
     if (window.cellConfigurations && typeof window.cellConfigurations === 'object') {
-        tableConfig.cellConfigurations = JSON.parse(JSON.stringify(window.cellConfigurations));
+        Object.keys(window.cellConfigurations).forEach(cellRef => {
+            const config = window.cellConfigurations[cellRef];
+            // 只保存有实际配置内容的单元格
+            if (config && Object.keys(config).length > 0) {
+                tableConfig.cellConfigurations[cellRef] = JSON.parse(JSON.stringify(config));
+            }
+        });
     }
     
-    // 从表格中收集数据
+    // 判断单元格是否有配置内容（非空且非默认值）
+    function isCellConfigured(cell, cellContent) {
+        // 检查是否有实际内容（排除纯数字的行号和列号）
+        const trimmedContent = cellContent.trim();
+        if (trimmedContent !== '' && !/^[0-9]+$/.test(trimmedContent) && !/^[A-Z]+$/.test(trimmedContent)) {
+            return true;
+        }
+        
+        // 检查是否有特殊类型（非text和非默认）
+        if (cell.dataset.type && cell.dataset.type !== 'text' && cell.dataset.type !== '') {
+            return true;
+        }
+        
+        // 检查是否有数据属性（排除默认的data-type）
+        let hasDataAttr = false;
+        for (let i = 0; i < cell.attributes.length; i++) {
+            const attr = cell.attributes[i];
+            if (attr.name.startsWith('data-') && attr.name !== 'data-type') {
+                hasDataAttr = true;
+                break;
+            }
+        }
+        if (hasDataAttr) return true;
+        
+        // 检查是否有合并单元格
+        const colspan = parseInt(cell.getAttribute('colspan') || '1');
+        const rowspan = parseInt(cell.getAttribute('rowspan') || '1');
+        if (colspan > 1 || rowspan > 1) return true;
+        
+        // 检查是否有通过inline style设置的非默认样式
+        if (cell.style.fontWeight && cell.style.fontWeight !== '' && cell.style.fontWeight !== 'normal') return true;
+        if (cell.style.fontStyle && cell.style.fontStyle === 'italic') return true;
+        if (cell.style.textDecoration && cell.style.textDecoration.includes('underline')) return true;
+        if (cell.style.backgroundColor && cell.style.backgroundColor !== '' && 
+            cell.style.backgroundColor !== 'rgba(0, 0, 0, 0)' && 
+            cell.style.backgroundColor !== 'transparent') return true;
+        if (cell.style.color && cell.style.color !== '' && cell.style.color !== 'rgb(0, 0, 0)') return true;
+        if (cell.style.fontSize && cell.style.fontSize !== '' && cell.style.fontSize !== '10px') return true;
+        
+        return false;
+    }
+    
+    // 从表格中收集数据（只保存已配置的单元格）
     const table = document.getElementById('design-table');
     if (table) {
         const rows = table.querySelectorAll('tr');
+        let hasConfiguredCells = false;
+        
         rows.forEach((row, rowIndex) => {
-            const rowData = [];
             const cells = row.querySelectorAll('td, th');
+            const rowData = new Array(cells.length).fill(null); // 初始化为null数组
+            let rowHasConfiguredCells = false;
             
             cells.forEach((cell, cellIndex) => {
+                // 跳过行号列（第一列的td，通常是行号）
+                // 注意：表头行(th)不跳过，因为列标题(A,B,C...)需要保存
+                if (cellIndex === 0 && cell.tagName === 'TD' && row.querySelector('td:first-child') === cell) {
+                    // 检查是否是行号列（内容为纯数字）
+                    if (/^[0-9]+$/.test(cell.textContent.trim())) {
+                        return; // 跳过行号列，保持为null
+                    }
+                }
+                
                 // 获取单元格内容
                 const cellContent = cell.textContent || '';
+                
+                // 只处理已配置的单元格
+                if (!isCellConfigured(cell, cellContent)) {
+                    return; // 跳过未配置的单元格，保持为null
+                }
+                
+                rowHasConfiguredCells = true;
+                hasConfiguredCells = true;
                 
                 // 检查单元格是否是合并的以及合并属性
                 const colspan = parseInt(cell.getAttribute('colspan') || '1');
                 const rowspan = parseInt(cell.getAttribute('rowspan') || '1');
                 
-                // 获取单元格样式和其他属性
-                const style = { ...window.getComputedStyle(cell) };
+                // 只保存显式设置的样式，而不是计算后的样式
                 const cellData = {
                     value: cellContent.trim(),
                     type: cell.dataset.type || 'text',
-                    colspan,
-                    rowspan,
-                    style: {
-                        fontWeight: style.fontWeight,
-                        fontSize: style.fontSize,
-                        textAlign: style.textAlign,
-                        backgroundColor: style.backgroundColor,
-                        color: style.color,
-                        border: style.border,
-                        fontStyle: style.fontStyle,
-                        textDecoration: style.textDecoration
-                    },
+                    rowIndex: rowIndex,
+                    cellIndex: cellIndex,  // 保存实际的列索引
                     data: {}
                 };
+                
+                // 只保存有值的属性
+                if (colspan > 1) cellData.colspan = colspan;
+                if (rowspan > 1) cellData.rowspan = rowspan;
+                
+                // 只保存显式设置的样式
+                const inlineStyles = {};
+                if (cell.style.fontWeight && cell.style.fontWeight !== '') {
+                    inlineStyles.fontWeight = cell.style.fontWeight;
+                }
+                if (cell.style.fontSize && cell.style.fontSize !== '') {
+                    inlineStyles.fontSize = cell.style.fontSize;
+                }
+                if (cell.style.textAlign && cell.style.textAlign !== '') {
+                    inlineStyles.textAlign = cell.style.textAlign;
+                }
+                if (cell.style.backgroundColor && cell.style.backgroundColor !== '') {
+                    inlineStyles.backgroundColor = cell.style.backgroundColor;
+                }
+                if (cell.style.color && cell.style.color !== '') {
+                    inlineStyles.color = cell.style.color;
+                }
+                if (cell.style.fontStyle && cell.style.fontStyle !== '') {
+                    inlineStyles.fontStyle = cell.style.fontStyle;
+                }
+                if (cell.style.textDecoration && cell.style.textDecoration !== '') {
+                    inlineStyles.textDecoration = cell.style.textDecoration;
+                }
+                
+                // 添加border样式
+                const computedStyle = window.getComputedStyle(cell);
+                const borderStyle = computedStyle.border;
+                if (borderStyle && borderStyle !== 'none') {
+                    inlineStyles.border = borderStyle;
+                }
+                
+                // 只有在有样式时才添加style属性
+                if (Object.keys(inlineStyles).length > 0) {
+                    cellData.style = inlineStyles;
+                }
                 
                 // 获取单元格的数据属性
                 for (let i = 0; i < cell.attributes.length; i++) {
                     const attr = cell.attributes[i];
-                    if (attr.name.startsWith('data-')) {
+                    if (attr.name.startsWith('data-') && attr.name !== 'data-type') {
                         const dataKey = attr.name.substring(5); // 移除 'data-' 前缀
                         cellData.data[dataKey] = attr.value;
                     }
@@ -188,11 +288,22 @@ function getCurrentTableConfig() {
                     };
                 }
                 
-                rowData.push(cellData);
+                // 如果data对象为空，删除它
+                if (Object.keys(cellData.data).length === 0) {
+                    delete cellData.data;
+                }
+                
+                // 将单元格数据放入正确的位置
+                rowData[cellIndex] = cellData;
             });
             
-            tableConfig.tableData.push(rowData);
+            // 只有当行有配置的单元格时才添加到tableData
+            if (rowHasConfiguredCells) {
+                tableConfig.tableData.push(rowData);
+            }
         });
+        
+        console.log(`收集到 ${tableConfig.tableData.length} 行已配置的单元格数据`);
     }
     
     return tableConfig;
@@ -224,6 +335,10 @@ function applyTableConfig(config) {
             // 将detailReportConfig的内容合并到config中
             window.currentNodeInfo.config.selectedDataSource = config.detailReportConfig.selectedDataSource;
             window.currentNodeInfo.config.selectedTable = config.detailReportConfig.selectedTable;
+            window.currentNodeInfo.config.selectedSchema = config.detailReportConfig.selectedSchema || '';
+            window.currentNodeInfo.config.selectedCols = config.detailReportConfig.selectedCols || [];
+            // 恢复选中的字段到全局变量
+            window.selectedCols = config.detailReportConfig.selectedCols || [];
             console.log('已保存到window.currentNodeInfo.config:', window.currentNodeInfo.config);
         }
         
@@ -274,62 +389,68 @@ function applyTableConfig(config) {
                 let appliedCount = 0;
                 
                 // 遍历导入的表格数据，将样式应用到对应的单元格
-                config.tableData.forEach((rowData, rowIndex) => {
-                    if (rowIndex < rows.length) {
-                        const row = rows[rowIndex];
-                        const cells = row.querySelectorAll('td, th');
-                        
-                        rowData.forEach((cellData, cellIndex) => {
-                            if (cellIndex < cells.length && cellData) {
-                                const cell = cells[cellIndex];
+                config.tableData.forEach((rowDataArray) => {
+                    // rowDataArray 是一个数组，包含该行的所有配置单元格
+                    rowDataArray.forEach((cellData) => {
+                        if (cellData && cellData.rowIndex !== undefined && cellData.cellIndex !== undefined) {
+                            const rowIndex = cellData.rowIndex;
+                            const cellIndex = cellData.cellIndex;
+                            
+                            if (rowIndex < rows.length) {
+                                const row = rows[rowIndex];
+                                const cells = row.querySelectorAll('td, th');
                                 
-                                // 应用单元格内容
-                                if (cellData.value !== undefined) {
-                                    cell.textContent = cellData.value;
-                                }
-                                
-                                // 应用样式
-                                if (cellData.style && typeof cellData.style === 'object') {
-                                    Object.keys(cellData.style).forEach(styleProp => {
-                                        try {
-                                            cell.style[styleProp] = cellData.style[styleProp];
-                                        } catch (e) {
-                                            console.warn(`无法应用样式 ${styleProp} 到单元格 (${rowIndex},${cellIndex}):`, e);
-                                        }
-                                    });
-                                }
-                                
-                                // 应用数据属性和类型
-                                if (cellData.type) {
-                                    cell.dataset.type = cellData.type;
-                                }
-                                
-                                if (cellData.data && typeof cellData.data === 'object') {
-                                    // 对于明细报表的字段单元格
-                                    if (cellData.type === 'field') {
-                                        if (cellData.data.table) cell.dataset.table = cellData.data.table;
-                                        if (cellData.data.field) cell.dataset.name = cellData.data.field;
-                                        if (cellData.data.displayName) cell.dataset.displayName = cellData.data.displayName;
-                                    } else {
-                                        // 其他类型的数据属性
-                                        Object.keys(cellData.data).forEach(dataKey => {
-                                            cell.setAttribute('data-' + dataKey, cellData.data[dataKey]);
+                                if (cellIndex < cells.length) {
+                                    const cell = cells[cellIndex];
+                                    
+                                    // 应用单元格内容
+                                    if (cellData.value !== undefined) {
+                                        cell.textContent = cellData.value;
+                                    }
+                                    
+                                    // 应用样式
+                                    if (cellData.style && typeof cellData.style === 'object') {
+                                        Object.keys(cellData.style).forEach(styleProp => {
+                                            try {
+                                                cell.style[styleProp] = cellData.style[styleProp];
+                                            } catch (e) {
+                                                console.warn(`无法应用样式 ${styleProp} 到单元格 (${rowIndex},${cellIndex}):`, e);
+                                            }
                                         });
                                     }
+                                    
+                                    // 应用数据属性和类型
+                                    if (cellData.type) {
+                                        cell.dataset.type = cellData.type;
+                                    }
+                                    
+                                    if (cellData.data && typeof cellData.data === 'object') {
+                                        // 对于明细报表的字段单元格
+                                        if (cellData.type === 'field') {
+                                            if (cellData.data.table) cell.dataset.table = cellData.data.table;
+                                            if (cellData.data.field) cell.dataset.name = cellData.data.field;
+                                            if (cellData.data.displayName) cell.dataset.displayName = cellData.data.displayName;
+                                        } else {
+                                            // 其他类型的数据属性
+                                            Object.keys(cellData.data).forEach(dataKey => {
+                                                cell.setAttribute('data-' + dataKey, cellData.data[dataKey]);
+                                            });
+                                        }
+                                    }
+                                    
+                                    // 应用合并单元格属性
+                                    if (cellData.colspan) {
+                                        cell.setAttribute('colspan', cellData.colspan);
+                                    }
+                                    if (cellData.rowspan) {
+                                        cell.setAttribute('rowspan', cellData.rowspan);
+                                    }
+                                    
+                                    appliedCount++;
                                 }
-                                
-                                // 应用合并单元格属性
-                                if (cellData.colspan) {
-                                    cell.setAttribute('colspan', cellData.colspan);
-                                }
-                                if (cellData.rowspan) {
-                                    cell.setAttribute('rowspan', cellData.rowspan);
-                                }
-                                
-                                appliedCount++;
                             }
-                        });
-                    }
+                        }
+                    });
                 });
                 
                 console.log(`成功将样式和数据应用到 ${appliedCount} 个单元格`);
