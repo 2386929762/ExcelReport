@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查询预览页</title>
+    <link href="css/font-awesome-4.7.0.min.css" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; width: 100%; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .table-container {
+            background: #fff;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .preview-table {
+            border-collapse: collapse;
+            width: 100%;
+            border: 1px solid #e0e0e0;
+            table-layout: fixed;
+        }
+
+        .preview-table thead {
+            background: #f8f9fa;
+        }
+
+        .preview-table th,
+        .preview-table td {
+            padding: 10px 12px;
+            border: 1px solid #eaeaea;
+            text-align: center;
+            min-width: 60px;
+            word-break: break-word;
+        }
+
+        .preview-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            border: 1px solid #eaeaea;
+        }
+
+        .preview-table td {
+            background-color: #fff;
+            color: #333;
+        }
+
+        .row-header {
+            width: 50px;
+            min-width: 50px;
+            max-width: 50px;
+            text-align: center;
+            font-weight: 600;
+            background: #f0f0f0;
+        }
+
+        .indicator-cell {
+            background: #f8f9fa;
+            font-weight: 600;
+            font-style: italic;
+        }
+
+        .indicator-data-cell {
+            background: #f0f8f4;
+            font-weight: 700;
+            color: #16a085;
+            text-align: center;
+        }
+
+        .text-cell {
+            background: #fff;
+            color: #333;
+        }
+
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #999;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="header-title">指标报表查询</div>
+    </div>
+
+    <div class="content">
+        <div class="table-container">
+            <table id="preview-table" class="preview-table">
+                <!-- 表格将由JS动态生成 -->
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 指标数据映射表 - 与 script.js 中的数据一致
+        const INDICATOR_DATA_MAP = {
+            '个人存款余额': [
+                { date: '2025-11-25', period: '季度', currency: 'CNY', region: '北京', department: '零售银行部', organization: 'head', balance: '1,523,456,789.00', source: '核心系统' },
+                { date: '2025-11-25', period: '季度', currency: 'USD', region: '北京', department: '零售银行部', organization: 'head', balance: '234,567,890.00', source: '核心系统' },
+                { date: '2025-11-25', period: '季度', currency: 'CNY', region: '上海', department: '零售银行部', organization: 'head', balance: '876,543,210.00', source: '核心系统' },
+                { date: '2025-11-25', period: '季度', currency: 'USD', region: '上海', department: '零售银行部', organization: 'head', balance: '123,456,789.00', source: '核心系统' },
+                { date: '2025-11-25', period: '季度', currency: 'EUR', region: '上海', department: '零售银行部', organization: 'head', balance: '56,789,012.00', source: '核心系统' },
+                { date: '2025-11-25', period: '季度', currency: 'CNY', region: '广州', department: '零售银行部', organization: 'head', balance: '987,654,321.00', source: '核心系统' },
+                { date: '2025-11-25', period: '季度', currency: 'HKD', region: '广州', department: '零售银行部', organization: 'head', balance: '456,789,012.00', source: '核心系统' },
+                { date: '2025-11-25', period: '日', currency: 'USD', region: '北京', department: '零售银行部', organization: 'head', balance: '345,678,901.00', source: '核心系统' }
+            ],
+            '对公存款余额': [
+                { date: '2025-11-25', period: '季度', currency: 'CNY', region: '北京', department: '零售银行部', organization: 'head', balance: '1,523,456,789.00', source: '核心系统' },
+                { date: '2025-11-25', period: '季度', currency: 'USD', region: '北京', department: '公司银行部', organization: 'head', balance: '345,678,901.00', source: '核心系统' },
+                { date: '2025-11-25', period: '季度', currency: 'CNY', region: '上海', department: '公司银行部', organization: 'branch-shanghai', balance: '1,876,543,210.00', source: '核心系统' },
+                { date: '2025-11-25', period: '季度', currency: 'JPY', region: '上海', department: '公司银行部', organization: 'branch-shanghai', balance: '456,789,012.00', source: '核心系统' },
+                { date: '2025-11-25', period: '季度', currency: 'CNY', region: '广州', department: '公司银行部', organization: 'branch-guangzhou', balance: '1,543,210,987.00', source: '核心系统' },
+                { date: '2025-11-25', period: '季度', currency: 'EUR', region: '广州', department: '公司银行部', organization: 'branch-guangzhou', balance: '89,765,432.00', source: '核心系统' },
+                { date: '2025-11-25', period: '季度', currency: 'CNY', region: '广州', department: '公司银行部', organization: 'branch-guangzhou', balance: '1,234,567,890.00', source: '核心系统' }
+            ],
+            '总存款余额': [
+                { date: '2025-11-25', period: '季度', currency: 'CNY', region: '上海', department: '总行', organization: 'head', balance: '3,647,013,510.00', source: '汇总计算' },
+                { date: '2025-11-25', period: '季度', currency: 'CNY', region: '上海', department: '总行', organization: 'head', balance: '213,222,221.00', source: '汇总计算' },
+                { date: '2025-11-25', period: '季度', currency: 'CNY', region: '广州', department: '总行', organization: 'head', balance: '3,456,789,012.00', source: '汇总计算' },
+                { date: '2025-11-25', period: '季度', currency: 'CNY', region: '全国', department: '总行', organization: 'head', balance: '8,987,654,321.00', source: '汇总计算' },
+                { date: '2025-11-25', period: '季度', currency: 'CNY', region: '全国', department: '总行', organization: 'head', balance: '567,890,123.00', source: '汇总计算' },
+                { date: '2025-11-25', period: '季度', currency: 'CNY', region: '全国', department: '总行', organization: 'head', balance: '10,234,567,890.00', source: '汇总计算' }
+            ]
+        };
+
+        // 从指标名提取数据
+        function getIndicatorDataByName(indicatorName) {
+            // 匹配 {指标名} 格式
+            const match = indicatorName.match(/\{([^}]+)\}/);
+            if (match) {
+                const name = match[1].trim();
+                return INDICATOR_DATA_MAP[name] || null;
+            }
+            return null;
+        }
+
+        // 从父窗口或本地存储获取过滤条件配置
+        function getFiltersFromParent(cellId) {
+            // 优先使用本地接收到的 cellConfigurations
+            if (cellConfigurations && cellConfigurations[cellId]) {
+                const config = cellConfigurations[cellId];
+                const filters = { currency: 'CNY' }; // 默认货币
+                if (config.dataDate && config.dataDate.trim() !== '') filters.date = config.dataDate;
+                if (config.currency && config.currency.trim() !== '') filters.currency = config.currency;
+                if (config.organization && config.organization.trim() !== '') filters.organization = config.organization;
+                console.log(`从本地配置获取 ${cellId} 的过滤条件:`, filters);
+                return filters;
+            }
+            
+            // 尝试从父窗口获取
+            try {
+                if (window.parent && window.parent.queryModule && typeof window.parent.queryModule.getQueryFilters === 'function') {
+                    const filters = window.parent.queryModule.getQueryFilters(cellId);
+                    if (filters) {
+                        console.log(`从父窗口获取 ${cellId} 的过滤条件:`, filters);
+                        return filters;
+                    }
+                }
+                if (window.parent && typeof window.parent.getQueryFilters === 'function') {
+                    const filters = window.parent.getQueryFilters(cellId);
+                    if (filters) {
+                        console.log(`从父窗口获取 ${cellId} 的过滤条件:`, filters);
+                        return filters;
+                    }
+                }
+            } catch (e) {
+                console.warn('从父窗口获取过滤条件失败:', e);
+            }
+            return null;
+        }
+
+        // 计算指标值（求和）- 支持多维度过滤（币种、日期、机构）
+        function calculateIndicatorValue(data, filters = {}, cellId = null) {
+            if (!Array.isArray(data)) return '';
+
+            // Helper: 获取 item 上指定字段的值，兼容拼写错误和大小写
+            function getItemFieldValue(item, field) {
+                if (!item) return undefined;
+                if (field === 'currency') return (item.currency || item.currenccy || item.CURRENCY || '').toString();
+                if (field === 'organization') return (item.organization || item.org || item.Organization || '').toString();
+                if (field === 'date') return item.date || item.Date || '';
+                return item[field];
+            }
+
+            // 如果没有提供 filters，尝试从父窗口获取，再或者使用默认的 filter
+            if (!filters || Object.keys(filters).length === 0) {
+                const parentFilters = cellId ? getFiltersFromParent(cellId) : null;
+                if (parentFilters && Object.keys(parentFilters).length > 0) {
+                    filters = parentFilters;
+                    console.log(`单元格 ${cellId} 使用获取到的过滤条件:`, filters);
+                } else {
+                    filters = { currency: 'CNY', organization: 'head' };
+                    console.log(`单元格 ${cellId} 使用默认过滤条件:`, filters);
+                }
+            }
+
+            // 应用多维度过滤，货币匹配不区分大小写且支持数组
+            const filtered = data.filter(item => {
+                return Object.entries(filters).every(([field, value]) => {
+                    const itemValRaw = getItemFieldValue(item, field);
+                    if (itemValRaw === undefined || itemValRaw === null) return false;
+
+                    const itemVal = itemValRaw.toString();
+
+                    // 日期字段支持年份模糊匹配（例如 '2025年'）
+                    if (field === 'date' && typeof value === 'string' && value.includes('年')) {
+                        const year = value.replace('年', '');
+                        return itemVal.startsWith(year);
+                    }
+
+                    // 货币字段：大小写不敏感，支持数组或单值
+                    if (field === 'currency') {
+                        if (Array.isArray(value)) {
+                            return value.some(v => (v || '').toString().toLowerCase() === itemVal.toLowerCase());
+                        }
+                        return (value || '').toString().toLowerCase() === itemVal.toLowerCase();
+                    }
+
+                    // 其它字段精确匹配（字符串化后比较）
+                    if (Array.isArray(value)) {
+                        return value.map(v => (v || '').toString()).includes(itemVal);
+                    }
+                    return itemVal === value.toString();
+                });
+            });
+
+            console.log(`单元格 ${cellId} 过滤后数据条数: ${filtered.length}/${data.length}`);
+
+            // 求和余额
+            const total = filtered.reduce((sum, item) => {
+                const balance = (item.balance || '').toString().replace(/[^\d.-]/g, '');
+                const num = parseFloat(balance);
+                return sum + (isNaN(num) ? 0 : num);
+            }, 0);
+
+            console.log(`单元格 ${cellId} 计算结果:`, total.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+
+            // 格式化为货币
+            return total.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // 存储单元格配置（用于过滤条件）
+        let cellConfigurations = {};
+
+        // 监听来自父窗口的 postMessage 事件
+        window.addEventListener('message', function (event) {
+            console.log('queryPreview iframe收到消息:', event);
+            
+            if (event.data && event.data.type === 'displayTableConfig') {
+                const configData = event.data.config;
+                console.log('收到表格配置数据:', configData);
+                
+                // 接收单元格配置
+                if (event.data.cellConfigurations) {
+                    cellConfigurations = event.data.cellConfigurations;
+                    console.log('收到单元格配置:', cellConfigurations);
+                }
+                
+                if (configData) {
+                    renderTableData(configData);
+                } else {
+                    showEmpty('暂无表格数据');
+                }
+            }
+        });
+
+        // 页面加载完成后显示初始状态
+        document.addEventListener('DOMContentLoaded', function () {
+            showEmpty('暂无表格数据');
+        });
+
+        function showEmpty(msg) {
+            const table = document.getElementById('preview-table');
+            table.innerHTML = `<tr><td class="text-cell" style="text-align:center; padding: 20px; color: #999;">${msg}</td></tr>`;
+        }
+
+        // 写死的数据，与 index.html 中预览的数据一致
+        const HARDCODED_TABLE_DATA = {
+            rows: [
+                { __row: '1', A: { content: '指标1', type: 'indicator' }, B: { content: '数据1', type: 'indicator_data' }, C: { content: '数据2', type: 'indicator_data' } },
+                { __row: '2', A: { content: '指标2', type: 'indicator' }, B: { content: '数据3', type: 'indicator_data' }, C: { content: '数据4', type: 'indicator_data' } },
+                { __row: '3', A: { content: '指标3', type: 'indicator' }, B: { content: '数据5', type: 'indicator_data' }, C: { content: '数据6', type: 'indicator_data' } }
+            ],
+            colWidths: [50, 150, 150, 150]
+        };
+
+        // 渲染入口：接受多种格式或使用写死的数据
+        function renderTableData(payload) {
+            console.log('renderTableData接收到的payload:', payload);
+            let rows = [];
+            let colWidths = [];
+            
+            // 如果没有payload或为空，使用写死的数据
+            if (!payload) {
+                console.log('payload为空，使用写死的数据');
+                displayTable(HARDCODED_TABLE_DATA.rows, HARDCODED_TABLE_DATA.colWidths);
+                return;
+            }
+
+            // 检查是否为设计工具格式（有 cellConfigurations 或 tableData）
+            if (payload.cellConfigurations || payload.tableData) {
+                console.log('检测到设计工具格式');
+                if (payload.tableData && Array.isArray(payload.tableData)) {
+                    rows = payload.tableData;
+                    console.log('提取tableData:', rows);
+                }
+            } else if (Array.isArray(payload)) {
+                console.log('检测到数组格式');
+                rows = payload;
+            } else if (payload.rows && Array.isArray(payload.rows)) {
+                console.log('检测到rows/colWidths格式');
+                rows = payload.rows;
+                if (Array.isArray(payload.colWidths)) colWidths = payload.colWidths;
+            } else {
+                console.log('未识别的payload格式，使用写死的数据:', payload);
+                displayTable(HARDCODED_TABLE_DATA.rows, HARDCODED_TABLE_DATA.colWidths);
+                return;
+            }
+
+            console.log('最终rows:', rows, 'colWidths:', colWidths);
+            
+            // 如果rows为空，使用写死的数据
+            if (!rows || rows.length === 0) {
+                console.log('rows为空，使用写死的数据');
+                displayTable(HARDCODED_TABLE_DATA.rows, HARDCODED_TABLE_DATA.colWidths);
+                return;
+            }
+            
+            displayTable(rows, colWidths);
+        }
+
+        function displayTable(rows, colWidths) {
+            const table = document.getElementById('preview-table');
+            table.innerHTML = '';
+
+            if (!rows || rows.length === 0) {
+                return showEmpty('暂无表格数据');
+            }
+
+            console.log('displayTable处理rows:', rows, 'colWidths:', colWidths);
+
+            // 构造 colgroup（如果有 colWidths）
+            if (Array.isArray(colWidths) && colWidths.length > 0) {
+                const colgroup = document.createElement('colgroup');
+                colWidths.forEach(w => {
+                    const col = document.createElement('col');
+                    col.style.width = (w && !isNaN(w)) ? (w + 'px') : '';
+                    colgroup.appendChild(col);
+                });
+                table.appendChild(colgroup);
+            }
+
+            // 检查第一行是否为数组（设计工具格式）还是对象（旧格式）
+            const firstRow = rows[0];
+            const isArrayFormat = Array.isArray(firstRow);
+            
+            console.log('检测到数据格式:', isArrayFormat ? '二维数组格式' : '对象格式');
+
+            if (isArrayFormat) {
+                // 处理二维数组格式 [[cell, cell, ...], [cell, cell, ...], ...]
+                rows.forEach((row, rowIdx) => {
+                    const tr = document.createElement('tr');
+                    
+                    if (Array.isArray(row)) {
+                        row.forEach((cellInfo, cellIdx) => {
+                            const td = document.createElement('td');
+                            
+                            // 生成单元格 ID (A1, B2 等)
+                            // 第一行是表头（列字母），第一列是行号
+                            // 所以实际的单元格从 (1,1) 开始，对应 A1
+                            // rowIdx=0 是表头行，rowIdx=1 对应第1行
+                            // cellIdx=0 是行号列，cellIdx=1 对应 A 列
+                            let cellId = null;
+                            if (rowIdx > 0 && cellIdx > 0) {
+                                const colLetter = String.fromCharCode(64 + cellIdx); // cellIdx=1 → A
+                                cellId = colLetter + rowIdx; // rowIdx=1 → A1
+                            }
+                            
+                            // 文本内容 - 如果是指标占位符 {指标名}，替换为实际数据
+                            let cellContent = cellInfo.value || '';
+                            if (cellContent.includes('{') && cellContent.includes('}')) {
+                                const indicatorData = getIndicatorDataByName(cellContent);
+                                if (indicatorData) {
+                                    cellContent = calculateIndicatorValue(indicatorData, {}, cellId);
+                                }
+                            }
+                            td.textContent = cellContent;
+                            
+                            // 应用基本类
+                            td.className = 'preview-cell';
+                            if (cellInfo.type === 'indicator') td.classList.add('indicator-cell');
+                            else if (cellInfo.type === 'indicator_data') td.classList.add('indicator-data-cell');
+                            else td.classList.add('text-cell');
+                            
+                            // inline 样式应用（优先）
+                            if (cellInfo.style && typeof cellInfo.style === 'object') {
+                                const style = cellInfo.style;
+                                if (style.backgroundColor) td.style.backgroundColor = style.backgroundColor;
+                                if (style.color) td.style.color = style.color;
+                                if (style.fontSize) td.style.fontSize = style.fontSize;
+                                if (style.fontWeight) td.style.fontWeight = style.fontWeight;
+                                if (style.textAlign) td.style.textAlign = style.textAlign;
+                                if (style.fontStyle) td.style.fontStyle = style.fontStyle;
+                                if (style.textDecoration) td.style.textDecoration = style.textDecoration;
+                                if (style.border) td.style.border = style.border;
+                            }
+                            
+                            // colspan / rowspan
+                            if (cellInfo.colspan && cellInfo.colspan > 1) td.colSpan = cellInfo.colspan;
+                            if (cellInfo.rowspan && cellInfo.rowspan > 1) td.rowSpan = cellInfo.rowspan;
+                            
+                            // 应用列宽
+                            if (colWidths && colWidths[cellIdx]) {
+                                td.style.width = colWidths[cellIdx] + 'px';
+                                td.style.boxSizing = 'border-box';
+                            }
+                            
+                            tr.appendChild(td);
+                        });
+                    }
+                    
+                    table.appendChild(tr);
+                });
+            } else {
+                // 处理对象格式 [{ __row, A: {content,...}, B:... }, ...]
+                // 构造 thead：首列为空（行号），其余用列字母
+                const thead = document.createElement('thead');
+                const headRow = document.createElement('tr');
+                const thRowHeader = document.createElement('th');
+                thRowHeader.className = 'preview-cell';
+                thRowHeader.style.backgroundColor = '#f0f0f0';
+                thRowHeader.style.border = '1px solid #eaeaea';
+                thRowHeader.style.width = (colWidths[0] ? colWidths[0] + 'px' : '50px');
+                headRow.appendChild(thRowHeader);
+
+                // 根据第一行的 keys 推断列
+                const colKeys = Object.keys(firstRow).filter(k => k !== '__row');
+
+                colKeys.forEach(k => {
+                    const th = document.createElement('th');
+                    th.className = 'preview-cell';
+                    th.textContent = k;
+                    const colIndex = colKeys.indexOf(k) + 1;
+                    if (colWidths && colWidths[colIndex]) {
+                        th.style.width = colWidths[colIndex] + 'px';
+                        th.style.boxSizing = 'border-box';
+                    }
+                    th.style.backgroundColor = '#f8f9fa';
+                    th.style.border = '1px solid #eaeaea';
+                    th.style.fontWeight = '600';
+                    th.style.textAlign = 'center';
+                    headRow.appendChild(th);
+                });
+
+                thead.appendChild(headRow);
+                table.appendChild(thead);
+
+                // tbody
+                const tbody = document.createElement('tbody');
+
+                rows.forEach((row, bodyRowIdx) => {
+                    const tr = document.createElement('tr');
+
+                    // 行号列
+                    const tdRow = document.createElement('td');
+                    tdRow.className = 'row-header';
+                    tdRow.textContent = row.__row || '';
+                    if (colWidths && colWidths[0]) tdRow.style.width = colWidths[0] + 'px';
+                    tr.appendChild(tdRow);
+
+                    // 其它列
+                    colKeys.forEach((colKey, idx) => {
+                        const cellInfo = row[colKey] || {};
+                        const td = document.createElement('td');
+
+                        // 生成单元格 ID (A1, B2 等) - 根据列字母和行号
+                        const rowNum = row.__row || (bodyRowIdx + 1);
+                        const cellId = colKey + rowNum;
+
+                        // 内容 - 如果是指标占位符 {指标名}，替换为实际数据
+                        let cellContent = cellInfo.content || '';
+                        if (cellContent.includes('{') && cellContent.includes('}')) {
+                            const indicatorData = getIndicatorDataByName(cellContent);
+                            if (indicatorData) {
+                                cellContent = calculateIndicatorValue(indicatorData, {}, cellId);
+                            }
+                        }
+                        td.textContent = cellContent;
+                        
+                        td.className = 'preview-cell';
+                        if (cellInfo.type === 'indicator') td.classList.add('indicator-cell');
+                        else if (cellInfo.type === 'indicator_data') td.classList.add('indicator-data-cell');
+                        else td.classList.add('text-cell');
+
+                        if (cellInfo.style && typeof cellInfo.style === 'object') {
+                            const style = cellInfo.style;
+                            if (style.backgroundColor) td.style.backgroundColor = style.backgroundColor;
+                            if (style.color) td.style.color = style.color;
+                            if (style.fontSize) td.style.fontSize = style.fontSize;
+                            if (style.fontWeight) td.style.fontWeight = style.fontWeight;
+                            if (style.textAlign) td.style.textAlign = style.textAlign;
+                            if (style.fontStyle) td.style.fontStyle = style.fontStyle;
+                            if (style.textDecoration) td.style.textDecoration = style.textDecoration;
+                        }
+
+                        if (cellInfo.colspan && cellInfo.colspan > 1) td.colSpan = cellInfo.colspan;
+                        if (cellInfo.rowspan && cellInfo.rowspan > 1) td.rowSpan = cellInfo.rowspan;
+
+                        if (colWidths && colWidths.length > 0) {
+                            const cw = colWidths[idx + 1];
+                            if (cw) td.style.width = cw + 'px';
+                            td.style.boxSizing = 'border-box';
+                        }
+
+                        tr.appendChild(td);
+                    });
+
+                    tbody.appendChild(tr);
+                });
+
+                table.appendChild(tbody);
+            }
+        }
+    </script>
+</body>
+
+</html>

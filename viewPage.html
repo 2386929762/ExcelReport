@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报表查看页</title>
+    <link rel="stylesheet" href="css/font-awesome-4.7.0.min.css">
+    <style>
+        /* 保持原有样式但允许 colgroup 宽度生效 */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .view-header { background:#fff; padding:10px 20px; border-bottom:1px solid #ddd; display:flex; align-items:center; justify-content:space-between; }
+        .view-title { font-weight:700; font-size:18px; }
+        .view-content { padding:20px; }
+        .preview-table-container { background:#fff; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1); padding:20px; overflow:auto; }
+        .preview-table { border-collapse: collapse; width:100%; border:1px solid #e0e0e0; table-layout: fixed; }
+        .preview-table col { /* allow inline width on col to control layout */ }
+        .preview-cell { padding:10px 12px; border:1px solid #eaeaea; text-align:center; min-width:60px; word-break:break-word; }
+        .preview-cell-indicator { background:#f8f9fa; font-weight:600; font-style:italic; }
+        .preview-cell-indicator_data { background:#f0f8f4; font-weight:700; color:#16a085; text-align:center; }
+        .preview-cell-text { background:#fff; color:#333; }
+        /* 行号列样式 */
+        .preview-table td.row-header { width:50px; min-width:50px; max-width:50px; text-align:center; font-weight:600; background:#f0f0f0; }
+    </style>
+</head>
+
+<body>
+    <div class="view-header">
+        <div class="view-title">报表查看</div>
+    </div>
+
+    <div class="view-content">
+        <div class="preview-table-container">
+            <table id="preview-table" class="preview-table" aria-hidden="false">
+                <!-- 表格将由 JS 动态生成（支持 colgroup 宽度及样式） -->
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 解析可能的输入格式：支持两种情况
+        // 1) URL 参数 tableData，格式可以是 Array 或 Object { rows, colWidths }
+        // 2) localStorage 的 lastViewedTableData，可能是 Array 或 Object { rows, colWidths }
+        document.addEventListener('DOMContentLoaded', function () {
+            renderFromUrlOrStorage();
+
+            // 监听 storage 事件以便在设计页更新 localStorage 时自动刷新（或用户刷新页面后同步）
+            window.addEventListener('storage', function (e) {
+                if (e.key === 'lastViewedTableData') {
+                    try {
+                        const newVal = JSON.parse(e.newValue);
+                        if (newVal) renderTableData(newVal);
+                    } catch (err) {
+                        console.error('storage 事件处理数据解析失败', err);
+                    }
+                }
+            });
+        });
+
+        function renderFromUrlOrStorage() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tableDataParam = urlParams.get('tableData');
+
+            if (tableDataParam) {
+                try {
+                    const parsed = JSON.parse(decodeURIComponent(tableDataParam));
+                    // 如果传入的是数组或对象，都可处理；同时将其写入 localStorage，方便后续刷新取最新
+                    try {
+                        // 将原始传入保存到 localStorage，以便其它选项卡/刷新可以读取
+                        // 保存格式： { rows: [...], colWidths: [...] } 或者 rows array 被包装
+                        if (Array.isArray(parsed)) {
+                            localStorage.setItem('lastViewedTableData', JSON.stringify({ rows: parsed }));
+                            renderTableData({ rows: parsed });
+                        } else if (parsed && typeof parsed === 'object') {
+                            // accept either { rows, colWidths } or other shapes
+                            if (parsed.rows) {
+                                localStorage.setItem('lastViewedTableData', JSON.stringify(parsed));
+                                renderTableData(parsed);
+                            } else {
+                                // fallback: assume object is array-like rows
+                                localStorage.setItem('lastViewedTableData', JSON.stringify({ rows: parsed }));
+                                renderTableData({ rows: parsed });
+                            }
+                        } else {
+                            throw new Error('不支持的 tableData 格式');
+                        }
+                    } catch (e) {
+                        console.warn('无法保存 tableData 到 localStorage:', e);
+                        // 仍然渲染
+                        if (Array.isArray(parsed)) renderTableData({ rows: parsed });
+                        else renderTableData(parsed);
+                    }
+                } catch (error) {
+                    console.error('解析表格数据失败:', error);
+                    showEmpty('加载表格数据失败');
+                }
+            } else {
+                const saved = localStorage.getItem('lastViewedTableData');
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        renderTableData(parsed);
+                    } catch (error) {
+                        console.error('加载保存的表格数据失败:', error);
+                        showEmpty('暂无表格数据');
+                    }
+                } else {
+                    showEmpty('暂无表格数据');
+                }
+            }
+        }
+
+        function showEmpty(msg) {
+            const table = document.getElementById('preview-table');
+            table.innerHTML = `<tr><td class="preview-cell preview-cell-text" style="text-align:center; padding: 20px;" colspan="5">${msg}</td></tr>`;
+        }
+
+        // 渲染入口：接受两种格式：
+        // - Array rows: [{ __row, A: {content,...}, B:... }, ...]
+        // - Object { rows: [...], colWidths: [...] }
+        function renderTableData(payload) {
+            let rows = [];
+            let colWidths = [];
+            if (!payload) return showEmpty('暂无表格数据');
+
+            if (Array.isArray(payload)) {
+                rows = payload;
+            } else if (payload.rows && Array.isArray(payload.rows)) {
+                rows = payload.rows;
+                if (Array.isArray(payload.colWidths)) colWidths = payload.colWidths;
+            } else {
+                // unlikely shape: treat as array-like
+                if (Array.isArray(payload)) rows = payload;
+                else return showEmpty('表格数据格式不支持');
+            }
+
+            displayTable(rows, colWidths);
+        }
+
+        function displayTable(rows, colWidths) {
+            const table = document.getElementById('preview-table');
+            table.innerHTML = '';
+
+            if (!rows || rows.length === 0) {
+                return showEmpty('暂无表格数据');
+            }
+
+            // 构造 colgroup（如果有 colWidths）
+            if (Array.isArray(colWidths) && colWidths.length > 0) {
+                const colgroup = document.createElement('colgroup');
+                colWidths.forEach(w => {
+                    const col = document.createElement('col');
+                    col.style.width = (w && !isNaN(w)) ? (w + 'px') : '';
+                    colgroup.appendChild(col);
+                });
+                table.appendChild(colgroup);
+            }
+
+            // 构造 thead：首列为空（行号），其余用列字母
+            const thead = document.createElement('thead');
+            const headRow = document.createElement('tr');
+            const thRowHeader = document.createElement('th');
+            thRowHeader.className = 'preview-cell';
+            thRowHeader.style.backgroundColor = '#f0f0f0';
+            thRowHeader.style.border = '1px solid #eaeaea';
+            thRowHeader.style.width = (colWidths[0] ? colWidths[0] + 'px' : '50px');
+            headRow.appendChild(thRowHeader);
+
+            // 根据第一行的 keys 推断列
+            const firstRow = rows[0] || {};
+            const colKeys = Object.keys(firstRow).filter(k => k !== '__row');
+
+            colKeys.forEach(k => {
+                const th = document.createElement('th');
+                th.className = 'preview-cell';
+                th.textContent = k;
+                // 如果有 colWidths 并且对应列存在，设置宽度（colWidths 可能包含 first col row header）
+                const colIndex = colKeys.indexOf(k) + 1; // shift by 1 because colWidths[0] is row header
+                if (colWidths && colWidths[colIndex]) {
+                    th.style.width = colWidths[colIndex] + 'px';
+                    th.style.boxSizing = 'border-box';
+                }
+                th.style.backgroundColor = '#f8f9fa';
+                th.style.border = '1px solid #eaeaea';
+                th.style.fontWeight = '600';
+                th.style.textAlign = 'center';
+                headRow.appendChild(th);
+            });
+
+            thead.appendChild(headRow);
+            table.appendChild(thead);
+
+            // tbody
+            const tbody = document.createElement('tbody');
+
+            rows.forEach(row => {
+                const tr = document.createElement('tr');
+
+                // 行号列
+                const tdRow = document.createElement('td');
+                tdRow.className = 'preview-cell row-header';
+                tdRow.textContent = row.__row || '';
+                // 如果有 colWidths[0] 则应用
+                if (colWidths && colWidths[0]) tdRow.style.width = colWidths[0] + 'px';
+                tr.appendChild(tdRow);
+
+                // 其它列
+                colKeys.forEach((colKey, idx) => {
+                    const cellInfo = row[colKey] || {};
+                    const td = document.createElement('td');
+
+                    // 文本内容
+                    td.textContent = cellInfo.content || '';
+
+                    // 应用基本类
+                    td.className = 'preview-cell';
+                    if (cellInfo.type === 'indicator') td.classList.add('preview-cell-indicator');
+                    else if (cellInfo.type === 'indicator_data') td.classList.add('preview-cell-indicator_data');
+                    else td.classList.add('preview-cell-text');
+
+                    // inline 样式应用（优先）
+                    if (cellInfo.style && typeof cellInfo.style === 'object') {
+                        const style = cellInfo.style;
+                        // 常用样式字段映射（支持 camelCase）
+                        if (style.backgroundColor) td.style.backgroundColor = style.backgroundColor;
+                        if (style.color) td.style.color = style.color;
+                        if (style.fontSize) td.style.fontSize = style.fontSize;
+                        if (style.fontWeight) td.style.fontWeight = style.fontWeight;
+                        if (style.textAlign) td.style.textAlign = style.textAlign;
+                        if (style.fontStyle) td.style.fontStyle = style.fontStyle;
+                        if (style.textDecoration) td.style.textDecoration = style.textDecoration;
+                        if (style.paddingTop || style.paddingRight || style.paddingBottom || style.paddingLeft) {
+                            td.style.paddingTop = style.paddingTop || td.style.paddingTop;
+                            td.style.paddingRight = style.paddingRight || td.style.paddingRight;
+                            td.style.paddingBottom = style.paddingBottom || td.style.paddingBottom;
+                            td.style.paddingLeft = style.paddingLeft || td.style.paddingLeft;
+                        }
+                    }
+
+                    // colspan / rowspan
+                    if (cellInfo.colspan && cellInfo.colspan > 1) td.colSpan = cellInfo.colspan;
+                    if (cellInfo.rowspan && cellInfo.rowspan > 1) td.rowSpan = cellInfo.rowspan;
+
+                    // 如果 colWidths 提供，设置对应列宽（colWidths[0] 为行号列）
+                    if (colWidths && colWidths.length > 0) {
+                        const cw = colWidths[idx + 1]; // shift
+                        if (cw) td.style.width = cw + 'px';
+                        td.style.boxSizing = 'border-box';
+                    }
+
+                    tr.appendChild(td);
+                });
+
+                tbody.appendChild(tr);
+            });
+
+            table.appendChild(tbody);
+        }
+
+        // 暴露 displayTableData 给外部（兼容）
+        window.displayTableData = function (input) {
+            // input 可能为 rows array 或 { rows, colWidths } object
+            if (!input) return;
+            if (Array.isArray(input)) renderTableData(input);
+            else if (input.rows) renderTableData(input);
+            else renderTableData({ rows: input });
+        };
+    </script>
+</body>
+
+</html>

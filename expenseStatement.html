@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报表明细</title>
+    <!-- Font Awesome -->
+    <link href="css/font-awesome-4.7.0.min.css" rel="stylesheet">
+    <!-- 外部CSS引用 -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/detailPreview.css">
+</head>
+
+<body>
+
+    <!-- 标题栏 -->
+    <div class="header">
+        <span>报表明细</span>
+    </div>
+
+    <!-- 主体容器 -->
+    <div class="main-container">
+
+        <!-- 左侧面板 -->
+        <div class="left-panel">
+            <div class="panel-header" onclick="toggleSection('left-panel')">
+                <h3>数据表</h3>
+                <span id="left-panel-icon" class="collapse-icon">◀</span>
+            </div>
+            <div id="left-panel-content">
+                <div class="panel-section">
+                    <div class="section-header">
+                        <h3>数据源选择</h3>
+                    </div>
+                    <div style="padding: 10px;">
+                        <select id="datasource-select" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;">
+                            <option value="">请选择数据源</option>
+                        </select>
+                        <select id="table-select" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;" disabled>
+                            <option value="">请先选择数据源</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <div class="section-header">
+                        <h3>字段列表</h3>
+                    </div>
+                    <div class="data-table-tree">
+                        <ul id="field-list-container" style="padding: 10px;">
+                            <!-- 动态加载字段列表 -->
+                            <li style="text-align: center; color: #999; padding: 20px;">
+                                请选择表加载字段
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中间区域 -->
+        <div class="center-panel">
+            <!-- 查询栏已移除 -->
+
+            <!-- 工具条 -->
+            <div class="toolbar">
+                <!-- 文件操作区 -->
+                <div class="toolbar-group">
+                    <button class="toolbar-btn save-btn"><i class="fa fa-save"></i></button>
+                    <button class="toolbar-btn"><i class="fa fa-download"></i></button>
+                    <button class="toolbar-btn clear-btn" title="清空配置"><i class="fa fa-trash"></i></button>
+                    <button class="toolbar-btn preview-btn" title="预览"><i class="fa fa-eye"></i></button>
+                    <button class="toolbar-btn view-page-btn" title="查看页"><i class="fa fa-external-link"></i></button>
+                </div>
+
+                <!-- 分隔线 -->
+                <div class="toolbar-divider"></div>
+
+                <!-- 格式设置区 -->
+                <div class="toolbar-group">
+                    <div class="dropdown">
+                        <button class="toolbar-btn dropdown-toggle"><i class="fa fa-table"></i></button>
+                    </div>
+                    <div class="dropdown">
+                        <button id="font-color-btn" class="toolbar-btn dropdown-toggle" title="字体颜色">
+                            <i class="fa fa-font"></i>
+                        </button>
+                        <div id="font-color-menu" class="dropdown-menu">
+                            <div class="color-picker">
+                                <div class="color-item" data-color="#000000" style="background-color: #000000;"></div>
+                                <div class="color-item" data-color="#FF0000" style="background-color: #FF0000;"></div>
+                                <div class="color-item" data-color="#0000FF" style="background-color: #0000FF;"></div>
+                                <div class="color-item" data-color="#008000" style="background-color: #008000;"></div>
+                                <div class="color-item" data-color="#FFA500" style="background-color: #FFA500;"></div>
+                                <div class="color-item" data-color="#800080" style="background-color: #800080;"></div>
+                                <div class="color-item" data-color="#FF00FF" style="background-color: #FF00FF;"></div>
+                                <div class="color-item" data-color="#00FFFF" style="background-color: #00FFFF;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dropdown">
+                        <button id="fill-color-btn" class="toolbar-btn dropdown-toggle" title="填充色"><i
+                                class="fa fa-paint-brush"></i></button>
+                        <div id="fill-color-menu" class="dropdown-menu">
+                            <div class="color-picker">
+                                <div class="color-item" data-color="#FFFFFF" style="background-color: #FFFFFF;"></div>
+                                <div class="color-item" data-color="#FFFF00" style="background-color: #FFFF00;"></div>
+                                <div class="color-item" data-color="#FFC0CB" style="background-color: #FFC0CB;"></div>
+                                <div class="color-item" data-color="#ADD8E6" style="background-color: #ADD8E6;"></div>
+                                <div class="color-item" data-color="#90EE90" style="background-color: #90EE90;"></div>
+                                <div class="color-item" data-color="#D3D3D3" style="background-color: #D3D3D3;"></div>
+                                <div class="color-item" data-color="#FFA07A" style="background-color: #FFA07A;"></div>
+                                <div class="color-item" data-color="#E6E6FA" style="background-color: #E6E6FA;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dropdown">
+                        <button id="font-size-btn" class="toolbar-btn dropdown-toggle" title="字号">
+                            <i class="fa fa-text-height"></i>
+                            <span class="font-size-value">10</span>
+                        </button>
+                        <div id="font-size-menu" class="dropdown-menu">
+                            <div class="size-picker">
+                                <div class="size-item" data-size="8">8</div>
+                                <div class="size-item" data-size="10">10</div>
+                                <div class="size-item" data-size="12">12</div>
+                                <div class="size-item" data-size="14">14</div>
+                                <div class="size-item" data-size="16">16</div>
+                                <div class="size-item" data-size="18">18</div>
+                                <div class="size-item" data-size="20">20</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 分隔线 -->
+                <div class="toolbar-divider"></div>
+
+                <!-- 文本格式区 -->
+                <div class="toolbar-group">
+                    <button id="bold-btn" class="toolbar-btn" title="加粗"><i class="fa fa-bold"></i></button>
+                    <button id="italic-btn" class="toolbar-btn" title="倾斜"><i class="fa fa-italic"></i></button>
+                    <button id="underline-btn" class="toolbar-btn" title="下划线"><i class="fa fa-underline"></i></button>
+                </div>
+
+                <!-- 分隔线 -->
+                <div class="toolbar-divider"></div>
+
+                <!-- 对齐方式区 -->
+                <div class="toolbar-group">
+                    <div class="dropdown">
+                        <button class="toolbar-btn dropdown-toggle"><i class="fa fa-list-ul"></i></button>
+                    </div>
+                    <div class="dropdown">
+                        <button class="toolbar-btn dropdown-toggle"><i class="fa fa-columns"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 单元格选中信息显示 -->
+            <div class="cell-selection-info" id="cell-selection-info">
+                <span class="cell-position">未选中任何单元格</span>
+                <div class="cell-input-container">
+                    <input type="text" class="cell-content-input" disabled placeholder="点击单元格进行编辑">
+                </div>
+            </div>
+
+            <!-- 设计区域 -->
+            <div class="design-area">
+                <table id="design-table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>A</th>
+                            <th>B</th>
+                            <th>C</th>
+                            <th>D</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td contenteditable="true"></td>
+                            <td contenteditable="true"></td>
+                            <td contenteditable="true"></td>
+                            <td contenteditable="true"></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td contenteditable="true"></td>
+                            <td contenteditable="true"></td>
+                            <td contenteditable="true"></td>
+                            <td contenteditable="true"></td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td contenteditable="true"></td>
+                            <td contenteditable="true"></td>
+                            <td contenteditable="true"></td>
+                            <td contenteditable="true"></td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td contenteditable="true"></td>
+                            <td contenteditable="true"></td>
+                            <td contenteditable="true"></td>
+                            <td contenteditable="true"></td>
+                        </tr>
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 右侧信息栏 -->
+        <div class="right-panel">
+            <div class="panel-header" onclick="toggleSection('right-panel')">
+                <span id="right-panel-icon" class="collapse-icon">▶</span>
+                <h3>单元格信息</h3>
+            </div>
+            <div id="right-panel-content">
+                <div class="cell-info" id="cell-info">
+                    <div class="info-group">
+                        <label>单元格类型:</label>
+                        <select id="cell-type">
+                            <option value="dimension">维度单元格</option>
+                            <option value="indicator" selected>指标单元格</option>
+                            <option value="text">文本单元格</option>
+                        </select>
+                    </div>
+                    <div class="info-group">
+                        <label>单元格编号:</label>
+                        <input type="text" id="cell-id" value="B3" readonly>
+                    </div>
+                    <div class="info-group">
+                        <label>来源指标:</label>
+                        <input type="text" id="cell-source" value="个人存款余额" readonly>
+                    </div>
+                    <div class="info-group">
+                        <label>数据单位:</label>
+                        <select id="cell-unit">
+                            <option value="">无</option>
+                            <option value="yuan">元</option>
+                            <option value="thousand">千元</option>
+                            <option value="million">万元</option>
+                        </select>
+                    </div>
+                    <div class="info-group">
+                        <label>显示精度:</label>
+                        <select id="cell-precision">
+                            <option>0</option>
+                            <option value="1">1</option>
+                            <option value="2" selected>2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+                    <div class="info-group">
+                        <label>计算规则:</label>
+                        <select id="cell-calc-rule">
+                            <option value="today" selected>本日</option>
+                            <option value="yesterday">昨日</option>
+                            <option value="sum">求和</option>
+                            <option value="avg">平均值</option>
+                            <option value="count">计数</option>
+                        </select>
+                    </div>
+                    <div class="info-group">
+                        <label>时间度量:</label>
+                        <select id="cell-time-unit">
+                            <option value="none" selected>无</option>
+                            <option value="day">日</option>
+                            <option value="month">月</option>
+                            <option value="quarter">季</option>
+                            <option value="year">年</option>
+                        </select>
+                    </div>
+                    <div class="info-group">
+                        <label>取值方式:</label>
+                        <select id="cell-value-type">
+                            <option value="point" selected>时点</option>
+                            <option value="period">时期</option>
+                        </select>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部操作按钮模块 -->
+    <div class="bottom-actions">
+        <div class="actions-container">
+            <button class="save-button">保存</button>
+            <button class="cancel-button">取消</button>
+        </div>
+    </div>
+
+    <!-- 预览模态框 -->
+    <div id="preview-modal" class="preview-modal">
+        <div id="modal-content" class="modal-content">
+            <div class="modal-header">
+                <h3>表格预览</h3>
+                <button id="modal-close" class="modal-close">&times;</button>
+            </div>
+            <div id="modal-body" class="modal-body">
+                <div id="preview-table-container" class="preview-table-container">
+                    <table id="preview-table" class="preview-table">
+                        <!-- 表格内容将由JavaScript动态生成 -->
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 引入拖拽功能处理模块 -->
+    <script src="https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk"></script>
+    <script src="js/dragAndDropHandler.js"></script>
+    <script src="js/expenseStatement.js"></script>
+    <script src="js/detailPreview.js"></script>
+    <script src="js/viewLauncher.js"></script>
+    <script src="js/configManager.js"></script>
+    <script src="js/sdkConfig.js"></script>
+    <script src="js/toolbarActions.js"></script>
+    
+    <!-- 加载SDK配置文件 -->
+    <script>
+        // 在应用初始化时加载SDK配置
+        if (window.SDK_CONFIG_SETTINGS) {
+            SDK_CONFIG_SETTINGS.loadFromFile('config/sdk-config.json')
+                .then(() => {
+                    console.log('SDK配置已加载');
+                    SDK_CONFIG_SETTINGS.printConfig();
+                })
+                .catch(error => {
+                    console.warn('加载SDK配置文件失败，将使用默认配置:', error);
+                });
+        }
+    </script>
+    
+    <!-- 配置接收与应用脚本 -->
+    <script>
+        // 全局保存节点信息和当前表格配置
+        window.currentNodeInfo = {
+            nodeId: null,
+            nodeName: null,
+            nodeType: '明细报表',
+            parentCode: null,
+            config: null
+        };
+
+        // 监听来自父窗口的消息
+        window.addEventListener('message', function(event) {
+            if (event.data) {
+                try {
+                    console.log('明细报表接收到消息:', event.data);
+                    
+                    // 保存节点信息用于保存
+                    if (event.data.nodeId !== undefined) {
+                        window.currentNodeInfo = {
+                            nodeId: event.data.nodeId || null,
+                            nodeName: event.data.nodeName || null,
+                            nodeType: '明细报表',
+                            parentCode: event.data.parentCode || null,
+                            config: event.data.config || null
+                        };
+                        console.log('已保存明细报表节点信息:', window.currentNodeInfo);
+                    }
+                    
+                    console.log('接收到明细表格配置:', event.data.config);
+                    
+                    // 等待DOM加载完成后应用配置
+                    if (document.readyState === 'complete') {
+                        applyConfigToTable(event.data.config);
+                    } else {
+                        window.addEventListener('load', function() {
+                            applyConfigToTable(event.data.config);
+                        });
+                    }
+                } catch (error) {
+                    console.error('处理明细表格配置时出错:', error);
+                }
+            }
+        });
+        
+        // 应用配置到表格
+        function applyConfigToTable(config) {
+            console.log('收到需要应用的配置:', config);
+            
+            // 保存配置供DOMContentLoaded使用
+            initialConfigToRestore = config;
+            
+            if (window.applyTableConfig) {
+                console.log('应用配置到明细表格...');
+                const success = window.applyTableConfig(config);
+                
+                if (success) {
+                    console.log('明细表格配置应用成功');
+                } else {
+                    console.error('明细表格配置应用失败');
+                }
+            } else {
+                console.error('applyTableConfig函数不可用，请确保configManager.js已正确加载');
+            }
+        }
+    </script>
+
+    <!-- SDK数据源和表管理脚本 -->
+    <script>
+        // SDK实例
+        let sdk = null;
+        let sdkConfig = {
+            devDefaultBaseUrl: 'https://demo.kwaidoo.com/zbyth/process',
+            busDomainCode: 'OctoCM_BDYTH'
+        };
+
+        // 初始化SDK
+        async function initializeSDK() {
+            try {
+                const baseUrl = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+                const configUrl = baseUrl + '/config/sdk-config.json';
+                
+                try {
+                    const response = await fetch(configUrl);
+                    if (response.ok) {
+                        const config = await response.json();
+                        sdkConfig.devDefaultBaseUrl = config.apiBaseUrl || sdkConfig.devDefaultBaseUrl;
+                        sdkConfig.busDomainCode = config.busDomainCode || sdkConfig.busDomainCode;
+                        console.log('SDK配置已从文件加载:', sdkConfig);
+                    }
+                } catch (error) {
+                    console.warn('加载SDK配置文件失败，使用默认配置:', error);
+                }
+
+                if (typeof PanelXSdk === 'undefined') {
+                    console.error('PanelXSdk未定义，请确保SDK脚本已正确加载');
+                    return false;
+                }
+
+                sdk = new PanelXSdk({ 
+                    devDefaultBaseUrl: sdkConfig.devDefaultBaseUrl, 
+                    busDomainCode: sdkConfig.busDomainCode 
+                });
+
+                try {
+                    await sdk.user.login({ userName: 'admin', password: '123456' });
+                    console.log('SDK登录成功');
+                } catch (e) { 
+                    console.warn('SDK登录失败:', e); 
+                }
+
+                return true;
+            } catch (err) {
+                console.error('SDK初始化失败:', err);
+                return false;
+            }
+        }
+
+        // 加载数据源列表
+        async function loadDataSources() {
+            try {
+                if (!sdk) {
+                    const initialized = await initializeSDK();
+                    if (!initialized) {
+                        console.error('SDK初始化失败，无法加载数据源');
+                        return;
+                    }
+                }
+
+                console.log('开始查询数据源列表...');
+                const params = {
+                    "panelCode": "IML_00005",
+                    "pageNo": 1,
+                    "pageSize": 100
+                };
+
+                const result = await sdk.api.queryFormDataList(params);
+                console.log('数据源查询返回结果:', result);
+
+                if (result && result.state === '200' && result.data && result.data.list) {
+                    const datasourceSelect = document.getElementById('datasource-select');
+                    datasourceSelect.innerHTML = '<option value="">请选择数据源</option>';
+                    
+                    result.data.list.forEach(ds => {
+                        const option = document.createElement('option');
+                        option.value = ds['数据源名称'];
+                        option.textContent = ds['数据源名称'] + ' (' + ds['数据库类型'] + ')';
+                        datasourceSelect.appendChild(option);
+                    });
+
+                    console.log('数据源列表加载成功，共' + result.data.list.length + '个数据源');
+                } else {
+                    console.error('数据源查询失败:', result);
+                }
+            } catch (error) {
+                console.error('加载数据源列表失败:', error);
+            }
+        }
+
+        // 根据数据源名称加载表列表
+        async function loadTablesByDataSource(datasourceName) {
+            try {
+                if (!sdk) {
+                    console.error('SDK未初始化');
+                    return;
+                }
+
+                console.log('开始查询数据源[' + datasourceName + ']的表列表...');
+                const params = {
+                    "panelCode": "IML_00003",
+                    "pageNo": 1,
+                    "pageSize": 100
+                };
+
+                const result = await sdk.api.queryFormDataList(params);
+                console.log('表管理查询返回结果:', result);
+
+                if (result && result.state === '200' && result.data && result.data.list) {
+                    const tables = result.data.list.filter(table => table['数据源名称'] === datasourceName);
+                    console.log('过滤后的表列表:', tables);
+
+                    window.currentTables = tables;
+
+                    const tableSelect = document.getElementById('table-select');
+                    tableSelect.innerHTML = '<option value="">请选择表</option>';
+                    tableSelect.disabled = false;
+
+                    tables.forEach(table => {
+                        const option = document.createElement('option');
+                        const tableName = table['表名'];
+                        const displayName = table['中文名'] ? table['中文名'] + ' (' + tableName + ')' : tableName;
+                        option.value = tableName;
+                        option.textContent = displayName;
+                        option.dataset.tableData = JSON.stringify(table);
+                        tableSelect.appendChild(option);
+                    });
+
+                    console.log('表下拉框已更新，共' + tables.length + '张表');
+                } else {
+                    console.error('表管理查询失败:', result);
+                }
+            } catch (error) {
+                console.error('加载表列表失败:', error);
+            }
+        }
+
+        // 根据选中的表加载字段列表
+        function loadFieldsByTable(tableName) {
+            if (!window.currentTables) {
+                console.error('表数据未加载');
+                return;
+            }
+
+            const table = window.currentTables.find(t => t['表名'] === tableName);
+            if (!table) {
+                console.error('未找到表:', tableName);
+                return;
+            }
+
+            console.log('加载表字段:', tableName, table);
+
+            let fields = [];
+            try {
+                if (table['表结构json']) {
+                    const fieldStr = table['表结构json'];
+                    fields = typeof fieldStr === 'string' ? JSON.parse(fieldStr) : fieldStr;
+                }
+            } catch (error) {
+                console.error('解析表结构JSON失败:', error, table['表结构json']);
+            }
+
+            renderFieldList(fields, tableName);
+        }
+
+        // 渲染字段列表
+        function renderFieldList(fields, tableName) {
+            const container = document.getElementById('field-list-container');
+            
+            if (!fields || fields.length === 0) {
+                container.innerHTML = '<li style="text-align: center; color: #999; padding: 20px;">该表没有字段</li>';
+                return;
+            }
+
+            container.innerHTML = '';
+
+            fields.forEach(field => {
+                const fieldItem = document.createElement('li');
+                fieldItem.className = 'table-field draggable';
+                fieldItem.draggable = true;
+                fieldItem.setAttribute('data-table', tableName);
+                fieldItem.setAttribute('data-field', field['字段名']);
+                fieldItem.style.padding = '8px 12px';
+                fieldItem.style.cursor = 'move';
+                fieldItem.style.borderBottom = '1px solid #eee';
+                fieldItem.style.listStyle = 'none';
+                
+                const fieldDisplayName = field['字段中文名'] ? 
+                    field['字段中文名'] + ' (' + field['字段名'] + ')' : 
+                    field['字段名'];
+                
+                fieldItem.innerHTML = `
+                    <i class="tree-item-icon" style="margin-right: 8px;">📄</i>
+                    <span class="tree-text">${fieldDisplayName}</span>
+                `;
+
+                fieldItem.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#f0f0f0';
+                });
+                fieldItem.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = '';
+                });
+
+                container.appendChild(fieldItem);
+            });
+
+            if (typeof initDragAndDrop === 'function') {
+                initDragAndDrop();
+                console.log('拖拽功能已重新初始化');
+            }
+
+            console.log('字段列表渲染完成，共' + fields.length + '个字段');
+        }
+
+        // 页面加载完成后初始化
+        let initialConfigToRestore = null;  // 用于存储需要恢复的配置
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('页面加载完成，开始初始化数据源');
+            
+            setTimeout(async function() {
+                await loadDataSources();
+                
+                // 优先使用从postMessage传来的配置(存储在initialConfigToRestore中)
+                let configToUse = initialConfigToRestore?.detailReportConfig || window.currentNodeInfo?.config;
+                
+                if (configToUse && configToUse.selectedDataSource) {
+                    const datasourceSelect = document.getElementById('datasource-select');
+                    const option = Array.from(datasourceSelect.options).find(opt => opt.value === configToUse.selectedDataSource);
+                    if (option) {
+                        datasourceSelect.value = configToUse.selectedDataSource;
+                        console.log('已恢复数据源选择:', configToUse.selectedDataSource);
+                        await loadTablesByDataSource(configToUse.selectedDataSource);
+                        
+                        if (configToUse.selectedTable) {
+                            const tableSelect = document.getElementById('table-select');
+                            const tableOption = Array.from(tableSelect.options).find(opt => opt.value === configToUse.selectedTable);
+                            if (tableOption) {
+                                tableSelect.value = configToUse.selectedTable;
+                                console.log('已恢复表选择:', configToUse.selectedTable);
+                                loadFieldsByTable(configToUse.selectedTable);
+                            }
+                        }
+                    }
+                }
+            }, 500);
+
+            document.getElementById('datasource-select').addEventListener('change', async function(e) {
+                const datasourceName = e.target.value;
+                console.log('选择数据源:', datasourceName);
+                
+                const tableSelect = document.getElementById('table-select');
+                tableSelect.innerHTML = '<option value="">请先选择数据源</option>';
+                tableSelect.disabled = true;
+                document.getElementById('field-list-container').innerHTML = 
+                    '<li style="text-align: center; color: #999; padding: 20px;">请选择表加载字段</li>';
+                
+                if (datasourceName) {
+                    await loadTablesByDataSource(datasourceName);
+                    
+                    if (window.currentNodeInfo) {
+                        if (!window.currentNodeInfo.config) {
+                            window.currentNodeInfo.config = {};
+                        }
+                        window.currentNodeInfo.config.selectedDataSource = datasourceName;
+                        delete window.currentNodeInfo.config.selectedTable;
+                        console.log('已保存数据源选择:', datasourceName);
+                    }
+                }
+            });
+
+            document.getElementById('table-select').addEventListener('change', function(e) {
+                const tableName = e.target.value;
+                console.log('选择表:', tableName);
+                
+                if (tableName) {
+                    loadFieldsByTable(tableName);
+                    
+                    if (window.currentNodeInfo) {
+                        if (!window.currentNodeInfo.config) {
+                            window.currentNodeInfo.config = {};
+                        }
+                        window.currentNodeInfo.config.selectedTable = tableName;
+                        console.log('已保存表选择:', tableName);
+                    }
+                } else {
+                    document.getElementById('field-list-container').innerHTML = 
+                        '<li style="text-align: center; color: #999; padding: 20px;">请选择表加载字段</li>';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

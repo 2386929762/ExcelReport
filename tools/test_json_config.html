@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>测试 JSON 配置</title>
+</head>
+<body>
+    <h2>测试结果：</h2>
+    <div id="results"></div>
+    
+    <script>
+        const config = {"cellConfigurations":{"A1":{"dataDate":"2025-11-25","currency":"CNY","organization":"head"},"A2":{"dataDate":"2025-11-25","currency":"USD","organization":"head"},"A3":{"dataDate":"2025-11-25","currency":"EUR","organization":"head"},"C3":{"dataDate":"2025-11-25","currency":"USD","organization":"head"}}};
+        
+        const IND = [
+            { date: '2025-11-25', currency: 'CNY', region: '北京', organization: 'head', balance: '1,523,456,789.00' },
+            { date: '2025-11-25', currency: 'USD', region: '北京', organization: 'head', balance: '234,567,890.00' },
+            { date: '2025-11-25', currency: 'CNY', region: '上海', organization: 'head', balance: '876,543,210.00' },
+            { date: '2025-11-25', currency: 'USD', region: '上海', organization: 'head', balance: '123,456,789.00' },
+            { date: '2025-11-25', currency: 'EUR', region: '上海', organization: 'head', balance: '56,789,012.00' },
+            { date: '2025-11-25', currency: 'CNY', region: '广州', organization: 'head', balance: '987,654,321.00' },
+            { date: '2025-11-25', currency: 'HKD', region: '广州', organization: 'head', balance: '456,789,012.00' },
+            { date: '2025-11-25', currency: 'USD', region: '北京', organization: 'head', balance: '345,678,901.00' }
+        ];
+        
+        function calculateValue(data, filters) {
+            const filtered = data.filter(item => {
+                return Object.entries(filters).every(([field, value]) => {
+                    if (!item[field]) return false;
+                    if (field === 'currency') {
+                        return item[field].toUpperCase() === value.toUpperCase();
+                    }
+                    if (field === 'date') {
+                        return item[field].startsWith(value);
+                    }
+                    return item[field] === value;
+                });
+            });
+            
+            const total = filtered.reduce((sum, item) => {
+                const num = parseFloat(item.balance.replace(/[^\d.-]/g, '')) || 0;
+                return sum + num;
+            }, 0);
+            
+            return total.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+        
+        const results = document.getElementById('results');
+        
+        // 测试 A1 (CNY)
+        const a1Config = config.cellConfigurations.A1;
+        const a1Result = calculateValue(IND, {currency: a1Config.currency, organization: a1Config.organization});
+        results.innerHTML += `<p><strong>A1 (CNY):</strong> ${a1Result}</p>`;
+        
+        // 测试 A2 (USD)
+        const a2Config = config.cellConfigurations.A2;
+        const a2Result = calculateValue(IND, {currency: a2Config.currency, organization: a2Config.organization});
+        results.innerHTML += `<p><strong>A2 (USD):</strong> ${a2Result}</p>`;
+        
+        // 测试 A3 (EUR)
+        const a3Config = config.cellConfigurations.A3;
+        const a3Result = calculateValue(IND, {currency: a3Config.currency, organization: a3Config.organization});
+        results.innerHTML += `<p><strong>A3 (EUR):</strong> ${a3Result}</p>`;
+        
+        // 测试 C3 (USD)
+        const c3Config = config.cellConfigurations.C3;
+        const c3Result = calculateValue(IND, {currency: c3Config.currency, organization: c3Config.organization});
+        results.innerHTML += `<p><strong>C3 (USD):</strong> ${c3Result}</p>`;
+        
+        results.innerHTML += '<hr><p><strong>预期结果：</strong></p>';
+        results.innerHTML += '<p>A1 (CNY): 3,387,654,320.00</p>';
+        results.innerHTML += '<p>A2 (USD): 703,703,580.00</p>';
+        results.innerHTML += '<p>A3 (EUR): 56,789,012.00</p>';
+        results.innerHTML += '<p>C3 (USD): 703,703,580.00</p>';
+    </script>
+</body>
+</html>

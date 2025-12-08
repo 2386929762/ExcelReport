@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报表节点管理系统</title>
+    <script src="js/tailwindcss.min.js"></script>
+    <script src="js/vue.global.prod.js"></script>
+    <link href="css/font-awesome-6.5.1-all.min.css" rel="stylesheet">
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"> -->
+    <link href="css/inter-font.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#64748b',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .tree-line {
+            position: absolute;
+            left: 11px;
+            top: 24px;
+            bottom: 0;
+            width: 1px;
+            background-color: #e2e8f0;
+            z-index: 0;
+        }
+
+        .fade-enter-active,
+        .fade-leave-active {
+            transition: opacity 0.2s ease;
+        }
+
+        .fade-enter-from,
+        .fade-leave-to {
+            opacity: 0;
+        }
+
+        /* Modal Transition */
+        .modal-enter-active,
+        .modal-leave-active {
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-enter-from,
+        .modal-leave-to {
+            opacity: 0;
+        }
+        /* 避免 Vue 挂载前模板占位内容闪烁 (v-cloak) */
+        [v-cloak] { display: none !important; }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-800 font-sans h-screen overflow-hidden flex flex-col">
+
+    <div id="app" v-cloak class="h-full flex flex-col relative">
+
+        <!-- <header class="bg-white border-b border-gray-200 h-16 flex items-center px-6 shadow-sm z-10 justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 text-white p-2 rounded-lg shadow-md">
+                    <i class="fa-solid fa-network-wired"></i>
+                </div>
+                <h1 class="text-xl font-semibold text-gray-800 tracking-tight">报表节点管理系统</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-sm text-gray-500 bg-gray-50 px-3 py-1 rounded-full border border-gray-200">
+                    <span class="w-2 h-2 rounded-full bg-green-500 inline-block mr-2"></span>
+                    数据源: {{ dataSourceType }}
+                </div>
+                <button @click="resetData" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> 重置数据
+                </button>
+            </div>
+        </header> -->
+
+        <main class="flex-1 flex overflow-hidden">
+
+            <aside
+                class="w-80 bg-white border-r border-gray-200 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-0">
+                <div class="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">目录结构</span>
+                    <button @click="openAddRootModal"
+                        class="text-xs bg-white border border-gray-200 hover:border-blue-500 hover:text-blue-600 text-gray-600 px-2 py-1 rounded transition-colors shadow-sm"
+                        title="添加根目录">
+                        <i class="fa-solid fa-plus"></i> 根节点
+                    </button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-2 relative">
+                    <template v-if="treeData.length > 0">
+                        <tree-node v-for="node in treeData" :key="node['编号']" :node="node" :selected-id="selectedNodeId"
+                            @select="handleSelect" @add="openAddChildModal" @edit="openEditModal"
+                            @delete="handleDelete"></tree-node>
+                    </template>
+                    <div v-else class="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
+                        <i class="fa-solid fa-folder-open text-3xl mb-2 opacity-50"></i>
+                        <p>暂无数据</p>
+                    </div>
+                </div>
+            </aside>
+
+            <section class="flex-1 bg-gray-50 relative overflow-hidden flex flex-col">
+
+                <div v-if="!selectedNode"
+                    class="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                    <div
+                        class="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4 text-gray-400 animate-pulse">
+                        <i class="fa-solid fa-mouse-pointer text-4xl"></i>
+                    </div>
+                    <p class="text-lg font-medium text-gray-500">请选择左侧节点查看详情</p>
+                    <p class="text-sm mt-2">点击目录可展开，点击报表可查看内容</p>
+                </div>
+
+                <div v-else class="h-full flex flex-col">
+
+                    <div class="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0">
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="font-medium text-gray-800">当前节点</span>
+                            <span class="mx-2 text-gray-300">/</span>
+                            <span class="text-blue-600">{{ selectedNode['节点名'] }}</span>
+                        </div>
+                        <!-- <div class="flex gap-2">
+                            <button @click="switchToDetails" :class="rightPanelView === 'details' ? 'bg-gray-100 text-gray-900' : 'text-gray-500'" class="px-3 py-1.5 text-xs font-medium border border-transparent rounded hover:bg-gray-50 transition-colors">
+                                <i class="fa-solid fa-circle-info mr-1"></i> 属性详情
+                            </button>
+                             <button @click="switchToIframe" :class="rightPanelView === 'iframe' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'text-gray-500'" class="px-3 py-1.5 text-xs font-medium border border-transparent rounded hover:bg-gray-50 transition-colors">
+                                <i class="fa-solid fa-laptop-code mr-1"></i> 设计页面
+                            </button>
+                            <div class="w-px h-6 bg-gray-200 mx-2"></div>
+                            <button @click="openEditModal(selectedNode)" class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                                <i class="fa-solid fa-pen mr-1"></i> 编辑
+                            </button>
+                            <button @click="handleDelete(selectedNode)" class="px-3 py-1.5 text-xs font-medium text-red-600 bg-white border border-gray-300 rounded hover:bg-red-50 hover:border-red-200 transition-colors">
+                                <i class="fa-solid fa-trash mr-1"></i> 删除
+                            </button>
+                        </div> -->
+                    </div>
+
+                    <div class="flex-1 overflow-hidden relative">
+
+                        <div v-if="rightPanelView === 'details'" class="h-full overflow-y-auto p-8 animate-fade-in">
+                            <div class="max-w-4xl mx-auto">
+                                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                                    <div class="flex items-start justify-between mb-6">
+                                        <div class="flex items-center gap-4">
+                                            <div :class="getNodeIconBg(selectedNode['节点类型'])"
+                                                class="w-12 h-12 rounded-lg flex items-center justify-center text-white text-xl shadow-sm">
+                                                <i :class="getNodeIcon(selectedNode['节点类型'])"></i>
+                                            </div>
+                                            <div>
+                                                <h2 class="text-xl font-bold text-gray-900">{{ selectedNode['节点名'] }}
+                                                </h2>
+                                                <span
+                                                    class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200 mt-1 inline-block">
+                                                    编号: {{ selectedNode['编号'] }}
+                                                </span>
+                                                <span
+                                                    class="ml-2 text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 mt-1 inline-block">
+                                                    {{ selectedNode['节点类型'] }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- <div class="grid grid-cols-2 gap-6 text-sm">
+                                        <div>
+                                            <p class="text-gray-500 mb-1">CODE</p>
+                                            <p class="font-mono text-gray-700 bg-gray-50 p-2 rounded border border-gray-100 truncate">{{ selectedNode['编号'] }}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-gray-500 mb-1">父节点 UUID</p>
+                                            <p class="font-mono text-gray-700 bg-gray-50 p-2 rounded border border-gray-100 truncate">{{ selectedNode['parentCode'] || 'Root' }}</p>
+                                        </div>
+                                        <div class="col-span-2" v-if="selectedNode.json">
+                                            <p class="text-gray-500 mb-1">JSON 数据</p>
+                                            <pre class="bg-gray-800 text-gray-100 p-3 rounded-lg text-xs font-mono overflow-x-auto h-32">{{ selectedNode.json }}</pre>
+                                        </div>
+                                    </div> -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-else-if="rightPanelView === 'iframe'" class="w-full h-full bg-white flex flex-col">
+                            <!-- <div class="bg-yellow-50 px-4 py-2 border-b border-yellow-100 text-yellow-800 text-xs flex justify-between items-center"> -->
+                            <!-- <span><i class="fa-solid fa-triangle-exclamation mr-1"></i> 编辑模式 ({{ getDesignPageName() }})</span>
+                               <span class="font-mono opacity-70">
+                                   <i class="fa-solid fa-paper-plane mr-1"></i>
+                                   {{ selectedNode['节点名'] }} Config
+                               </span> -->
+                            <!-- </div> -->
+
+                            <iframe :key="selectedNodeId" ref="iframeRef" @load="onIframeLoad" :src="getDesignPageUrl()"
+                                class="w-full h-full border-0"
+                                sandbox="allow-scripts allow-same-origin allow-forms allow-popups">
+                            </iframe>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <transition name="modal">
+            <div v-if="showModal"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50 backdrop-blur-sm">
+                <div
+                    class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100">
+                    <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                        <h3 class="text-lg font-bold text-gray-800">
+                            {{ modalMode === 'add' ? '新建节点' : '编辑节点' }}
+                        </h3>
+                        <button @click="closeModal" class="text-gray-400 hover:text-gray-600 transition-colors">
+                            <i class="fa-solid fa-xmark text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="p-6">
+                        <form @submit.prevent="confirmModal" id="nodeForm">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">节点名称 <span
+                                            class="text-red-500">*</span></label>
+                                    <input v-model="modalForm.name" type="text" required
+                                        class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2.5 outline-none transition-all"
+                                        placeholder="请输入名称" ref="nameInput">
+                                </div>
+
+                                <div v-if="modalMode === 'edit'">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">编号/ID <span
+                                            class="text-gray-400 text-xs font-normal">(只读)</span></label>
+                                    <input v-model="modalForm.id" type="text" disabled
+                                        class="w-full rounded-md border-gray-300 shadow-sm sm:text-sm border p-2.5 outline-none bg-gray-100 text-gray-500 cursor-not-allowed">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">节点类型 <span
+                                            class="text-red-500">*</span></label>
+                                    <div class="relative">
+                                        <select v-model="modalForm.type" :disabled="modalMode === 'edit'"
+                                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2.5 outline-none bg-white appearance-none disabled:bg-gray-100 disabled:text-gray-500">
+                                            <option value="目录">📂 目录 (Directory)</option>
+                                            <option value="指标报表">📊 指标报表 (Report)</option>
+                                            <option value="明细报表">📑 明细报表 (Detail)</option>
+                                        </select>
+                                        <div
+                                            class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                                        </div>
+                                    </div>
+                                    <p v-if="modalMode === 'edit'" class="text-xs text-yellow-600 mt-1">
+                                        <i class="fa-solid fa-info-circle"></i> 编辑模式下无法修改节点类型
+                                    </p>
+                                </div>
+
+                                <div v-if="modalMode === 'add'"
+                                    class="text-xs text-gray-500 pt-2 border-t border-gray-100 mt-4">
+                                    <span class="font-semibold">父节点:</span>
+                                    {{ modalForm.parentName || '根节点 (Root)' }}
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+                        <button type="button" @click="closeModal"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none transition-colors">
+                            取消
+                        </button>
+                        <button type="submit" form="nodeForm"
+                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none transition-colors">
+                            确认保存
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Confirm Dialog -->
+            <div v-if="showConfirmDialog"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50 backdrop-blur-sm">
+                <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+                    <div class="bg-gray-50 px-6 py-4 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-800">
+                            {{ confirmDialogData.title }}
+                        </h3>
+                    </div>
+
+                    <div class="p-6">
+                        <p class="text-gray-700 text-base">
+                            {{ confirmDialogData.message }}
+                        </p>
+                    </div>
+
+                    <div class="bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+                        <button @click="cancelAction"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none transition-colors">
+                            取消
+                        </button>
+                        <button @click="confirmAction"
+                            class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-lg shadow-sm hover:bg-red-700 focus:outline-none transition-colors">
+                            确认删除
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+    </div>
+
+    <script type="text/x-template" id="tree-node-template">
+        <div class="relative pl-4 select-none">
+            <div v-if="depth > 0" class="tree-line"></div>
+            
+            <div 
+                class="group relative flex items-center justify-between p-2 rounded-md cursor-pointer transition-all duration-200 border border-transparent hover:bg-gray-100 mb-1"
+                :class="{'bg-blue-50 border-blue-100': isSelected}"
+                @click.stop="handleClick"
+            >
+                <div class="flex items-center gap-2 overflow-hidden">
+                    <span 
+                        v-if="isFolder" 
+                        @click.stop="toggle" 
+                        class="w-5 h-5 flex items-center justify-center rounded hover:bg-gray-200 text-gray-400 transition-colors"
+                    >
+                        <i :class="isOpen ? 'fa-solid fa-caret-down text-gray-600' : 'fa-solid fa-caret-right'"></i>
+                    </span>
+                    <span v-else class="w-5 h-5"></span>
+
+                    <i :class="[getIconClass, isSelected ? 'text-blue-600' : 'text-gray-500']" class="text-sm"></i>
+                    
+                    <span class="text-sm font-medium truncate" :class="isSelected ? 'text-blue-700' : 'text-gray-700'">
+                        {{ node['节点名'] }}
+                    </span>
+                </div>
+
+                <div class="hidden group-hover:flex items-center gap-1 bg-gray-100 pl-2 rounded-l shadow-sm absolute right-1">
+                    <button v-if="isFolder" @click.stop="$emit('add', node)" title="添加子节点" class="w-6 h-6 flex items-center justify-center rounded-full hover:bg-blue-100 hover:text-blue-600 text-gray-400 text-xs transition-colors">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                    <button @click.stop="$emit('edit', node)" title="编辑" class="w-6 h-6 flex items-center justify-center rounded-full hover:bg-yellow-100 hover:text-yellow-600 text-gray-400 text-xs transition-colors">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <button @click.stop="$emit('delete', node)" title="删除" class="w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-100 hover:text-red-600 text-gray-400 text-xs transition-colors">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+
+            <transition name="fade">
+                <div v-if="isFolder && isOpen" class="relative">
+                    <tree-node 
+                        v-for="child in node.children" 
+                        :key="child['编号']" 
+                        :node="child"
+                        :depth="depth + 1"
+                        :selected-id="selectedId"
+                        @select="$emit('select', $event)"
+                        @add="$emit('add', $event)"
+                        @edit="$emit('edit', $event)"
+                        @delete="$emit('delete', $event)"
+                    ></tree-node>
+                </div>
+            </transition>
+        </div>
+    </script>
+
+    <script src="https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk"></script>
+      <!-- <script>
+      // 根据环境动态加载 SDK
+      const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      const sdkUrl = isDev ? 'https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk' : '/wp-core/api/getPanelXSdk';
+      const script = document.createElement('script');
+      script.src = sdkUrl;
+      document.head.appendChild(script);
+    </script> -->
+    <script>
+        // SDK脚本无法离线访问，配置中使用本地默认URL进行开发测试
+        // 如需连接真实服务器，请修改config/sdk-config.json中的apiBaseUrl
+
+        const { createApp, ref, computed, reactive, onMounted, nextTick } = Vue;
+
+        // 全局SDK实例和配置
+        let sdk = null;
+        let sdkConfig = {
+            devDefaultBaseUrl: 'https://demo.kwaidoo.com/zbyth/process',
+            busDomainCode: 'OctoCM_BDYTH',
+            panelCode: 'OctoCM_BDYTH_IML_00001'
+        };
+
+        // 从配置文件加载SDK配置
+        async function loadSDKConfig() {
+            try {
+                // 获取当前页面URL的目录路径
+                const baseUrl = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+                const configUrl = baseUrl + '/config/sdk-config.json';
+
+                const response = await fetch(configUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const config = await response.json();
+                sdkConfig.devDefaultBaseUrl = config.apiBaseUrl || sdkConfig.devDefaultBaseUrl;
+                sdkConfig.busDomainCode = config.busDomainCode || sdkConfig.busDomainCode;
+                sdkConfig.panelCode = config.panelCode || sdkConfig.panelCode;
+                console.log('SDK配置已从文件加载:', sdkConfig);
+            } catch (error) {
+                console.warn('加载SDK配置文件失败，使用默认配置:', error);
+            }
+        }
+
+        async function initializeSdkAndLogin() {
+            try {
+                if (typeof PanelXSdk === 'undefined') {
+                    sdk = null;
+                    return false;
+                }
+                sdk = new PanelXSdk({ devDefaultBaseUrl: sdkConfig.devDefaultBaseUrl, busDomainCode: sdkConfig.busDomainCode });
+                try {
+                    await sdk.user.login({ userName: 'admin', password: '123456' });
+                } catch (e) { console.warn(e); }
+                return true;
+            } catch (err) {
+                sdk = null;
+                return false;
+            }
+        }
+
+        /**
+         * 调用SDK保存树节点信息
+         * @param {Object} nodeInfo - 节点信息
+         * @param {string} nodeInfo.nodeName - 节点名
+         * @param {string} nodeInfo.nodeType - 节点类型
+         * @param {string} nodeInfo.parentCode - 父节点编号
+         * @param {string} nodeInfo.nodeId - 节点编号（编辑时传入，新建时不传）
+         * @returns {Object} SDK返回结果
+         */
+        async function callSDKSaveNode(nodeInfo) {
+            try {
+                if (!sdk) {
+                    await initializeSdkAndLogin();
+                }
+
+                if (!sdk || !sdk.api) {
+                    throw new Error('SDK初始化失败或不可用');
+                }
+
+                // 从配置中获取保存按钮配置
+                const saveButtonConfig = (window.SDK_CONFIG_SETTINGS?.saveButton) || { panelCode: 'IML_00001', buttonName: '保存' };
+
+                // 构建表单数据
+                const formData = {
+                    "节点名": nodeInfo.nodeName,
+                    "节点类型": nodeInfo.nodeType || "指标报表"
+                };
+
+                // 只有当parentCode有值时才添加到formData（根节点不需要传parentCode）
+                if (nodeInfo.parentCode) {
+                    formData["parentCode"] = nodeInfo.parentCode;
+                }
+
+                // 编辑时传入编号，新建时不传
+                if (nodeInfo.nodeId) {
+                    formData["编号"] = nodeInfo.nodeId;
+                }
+
+                console.log('调用SDK保存节点，参数:', {
+                    panelCode: saveButtonConfig.panelCode,
+                    buttonName: saveButtonConfig.buttonName,
+                    formData: formData
+                });
+
+                // 调用SDK接口
+                const result = await sdk.api.callButton({
+                    "panelCode": saveButtonConfig.panelCode,
+                    "buttonName": saveButtonConfig.buttonName,
+                    "formData": formData
+                });
+
+                console.log('SDK保存节点返回结果:', result);
+                return result;
+            } catch (error) {
+                console.error('SDK保存节点失败:', error);
+                throw error;
+            }
+        }
+
+        // --- Default Mock Data ---
+        const DEFAULT_DATA = [
+            { "编号": "000", "节点名": "父节点", "节点类型": "目录" },
+            // 确保这两个节点的 JSON 数据不同，以便测试数据是否更新
+            { "编号": "002", "节点名": "测试明细 (ID: 002)", "节点类型": "明细报表", "parentCode": "000", "json": "{\"reportType\": \"detail\", \"dataKey\": \"a\"}" },
+            { "编号": "001", "节点名": "测试指标 (ID: 001)", "节点类型": "指标报表", "json": "{\"reportType\": \"indicator\", \"dataKey\": \"b\"}", "parentCode": "000" }
+        ];
+
+        // --- Tree Node Component ---
+        const TreeNode = {
+            template: '#tree-node-template',
+            name: 'TreeNode',
+            props: ['node', 'selectedId', 'depth'],
+            emits: ['select', 'add', 'edit', 'delete'],
+            setup(props, { emit }) {
+                const isOpen = ref(false);
+                if (props.depth === 0) isOpen.value = true;
+
+                const isFolder = computed(() => props.node['节点类型'] === '目录');
+                const isSelected = computed(() => props.node['编号'] === props.selectedId);
+                const getIconClass = computed(() => {
+                    const type = props.node['节点类型'];
+                    if (type === '目录') return isOpen.value ? 'fa-regular fa-folder-open text-yellow-500' : 'fa-regular fa-folder text-yellow-500';
+                    if (type === '指标报表') return 'fa-solid fa-chart-pie text-purple-500';
+                    if (type === '明细报表') return 'fa-solid fa-table-list text-green-500';
+                    return 'fa-regular fa-file';
+                });
+
+                const toggle = () => { if (isFolder.value) isOpen.value = !isOpen.value; };
+                const handleClick = () => { emit('select', props.node); if (isFolder.value) toggle(); };
+
+                return { isOpen, isFolder, isSelected, getIconClass, toggle, handleClick };
+            }
+        };
+
+        // --- Main App ---
+        createApp({
+            components: { TreeNode },
+            setup() {
+                // State
+                const flatList = ref([]);
+                const selectedNodeId = ref(null);
+                const dataSourceType = ref('默认数据');
+                const rightPanelView = ref('details');
+                const iframeRef = ref(null); // Reference to the iframe element
+
+                // Modal State
+                const showModal = ref(false);
+                const modalMode = ref('add'); // 'add' | 'edit'
+                const modalForm = ref({
+                    name: '',
+                    id: '',
+                    type: '目录',
+                    parentCode: '',
+                    parentName: ''
+                });
+                const nameInput = ref(null);
+
+                // Confirm Dialog State
+                const showConfirmDialog = ref(false);
+                const confirmDialogData = ref({
+                    title: '',
+                    message: '',
+                    confirmCallback: null,
+                    cancelCallback: null
+                });
+
+                // --- Data Loading ---
+                const loadData = async () => {
+                    let finalData = [];
+                    let source = '默认数据';
+                    try {
+                        if (!sdk) await initializeSdkAndLogin();
+                        if (sdk && sdk.api) {
+                            const res = await sdk.api.queryFormDataList({ panelCode: sdkConfig.panelCode });
+                            if (res?.data?.list) {
+                                finalData = res.data.list;
+                                source = 'SDK 数据';
+                            }
+                        }
+                    } catch (e) { console.warn(e); }
+
+                    if ((!finalData || finalData.length === 0) && typeof externalJsonData !== 'undefined' && externalJsonData?.data?.list) {
+                        finalData = externalJsonData.data.list;
+                        source = '外部接口';
+                    }
+
+                    if (!finalData || finalData.length === 0) {
+                        finalData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+                        source = '默认数据';
+                    }
+
+                    flatList.value = finalData;
+                    dataSourceType.value = source;
+                };
+
+                // --- Tree Logic ---
+                const treeData = computed(() => {
+                    const data = JSON.parse(JSON.stringify(flatList.value));
+                    const map = {};
+                    const roots = [];
+                    data.forEach(node => { node.children = []; map[node['编号']] = node; });
+                    data.forEach(node => {
+                        if (node['parentCode'] && map[node['parentCode']]) {
+                            map[node['parentCode']].children.push(node);
+                        } else {
+                            roots.push(node);
+                        }
+                    });
+                    return roots;
+                });
+
+                const selectedNode = computed(() => flatList.value.find(n => n['编号'] === selectedNodeId.value));
+
+                // 根据节点类型获取设计页面URL
+                const getDesignPageUrl = () => {
+                    if (!selectedNode.value) return './index.html';
+                    const nodeType = selectedNode.value['节点类型'];
+                    if (nodeType === '明细报表') {
+                        return './expenseStatement.html';
+                    }
+                    return './index.html';
+                };
+
+                // 获取设计页面名称（用于显示）
+                const getDesignPageName = () => {
+                    if (!selectedNode.value) return 'index.html';
+                    const nodeType = selectedNode.value['节点类型'];
+                    if (nodeType === '明细报表') {
+                        return 'expenseStatement.html';
+                    }
+                    return 'index.html';
+                };
+
+                // --- Iframe Communication Helper ---
+                const sendMessageToIframe = (node) => {
+                    const iframe = iframeRef.value;
+                    if (iframe && iframe.contentWindow && node) {
+                        let configData = {};
+                        try {
+                            configData = typeof node.json === 'string' ? JSON.parse(node.json) : node.json;
+                        } catch (e) {
+                            console.warn("Error parsing JSON config:", e);
+                            configData = {};
+                        }
+
+                        // Post Message
+                        iframe.contentWindow.postMessage({
+                            type: node['节点类型'],
+                            config: configData,
+                            nodeId: node['编号'] || null,
+                            nodeName: node['节点名'],
+                            parentCode: node['parentCode'] || null
+                        }, '*');
+
+                        // Console Log for Verification
+                        console.log(`%c[Iframe Msg SENT] %cID: ${node['编号']}, Name: ${node['节点名']}. Data:`, 'color: green; font-weight: bold;', 'color: black;', configData);
+                    }
+                };
+
+                // Event: Iframe Loaded
+                const onIframeLoad = () => {
+                    // Console Log for Verification
+                    console.log(`%c[Iframe LOADED] %cIframe for node ID ${selectedNodeId.value} just loaded.`, 'color: orange; font-weight: bold;', 'color: black;');
+
+                    if (selectedNode.value) {
+                        sendMessageToIframe(selectedNode.value);
+                    }
+                };
+
+                // --- Actions ---
+
+                const handleSelect = (node) => {
+                    selectedNodeId.value = node['编号'];
+
+                    // 判断节点类型，如果是报表类型则查询SDK数据
+                    if ((node['节点类型'] === '指标报表' || node['节点类型'] === '明细报表') && sdk && sdk.api) {
+                        const params = {
+                            "panelCode": "IML_00001",
+                            "condition": {
+                                "code": node['编号']
+                            }
+                        };
+
+                        console.log('开始查询节点数据，参数:', params);
+
+                        sdk.api.queryFormData(params)
+                            .then(result => {
+                                console.log('SDK查询成功，返回结果:', result);
+
+                                // 如果查询到数据，使用查询返回的信息打开iframe
+                                if (result && result.data && result.data.list && result.data.list.length > 0) {
+                                    const queryData = result.data.list[0]; // 获取第一条结果
+                                    console.log('获取到节点配置数据:', queryData);
+
+                                    // 更新本地节点的json字段
+                                    if (queryData.json) {
+                                        const nodeIndex = flatList.value.findIndex(n => n['编号'] === queryData['编号']);
+                                        if (nodeIndex !== -1) {
+                                            flatList.value[nodeIndex].json = queryData.json;
+                                            console.log('已更新节点配置');
+                                        }
+                                    }
+
+                                    // 切换到iframe视图
+                                    rightPanelView.value = 'iframe';
+
+                                    // 用查询返回的数据构建消息，发送给iframe
+                                    nextTick(() => {
+                                        const iframeWindow = document.getElementById('designerIframe')?.contentWindow;
+                                        if (iframeWindow) {
+                                            const messageData = {
+                                                type: 'loadConfig',
+                                                nodeId: queryData['编号'],
+                                                nodeName: queryData['节点名'],
+                                                parentCode: queryData['parentCode'],
+                                                config: typeof queryData.json === 'string' ? JSON.parse(queryData.json) : queryData.json
+                                            };
+                                            console.log('发送查询结果给iframe:', messageData);
+                                            iframeWindow.postMessage(messageData, '*');
+                                        }
+                                    });
+                                } else {
+                                    console.warn('查询未返回有效数据，使用本地节点信息');
+                                    rightPanelView.value = 'iframe';
+                                    nextTick(() => {
+                                        if (selectedNode.value) sendMessageToIframe(selectedNode.value);
+                                    });
+                                }
+                            })
+                            .catch(error => {
+                                console.error('SDK查询失败:', error);
+                                // 查询失败时，使用本地数据打开iframe
+                                rightPanelView.value = 'iframe';
+                                nextTick(() => {
+                                    if (selectedNode.value) sendMessageToIframe(selectedNode.value);
+                                });
+                            });
+                    } else if (node['节点类型'] === '指标报表' || node['节点类型'] === '明细报表') {
+                        // SDK不可用时，使用本地数据打开iframe
+                        rightPanelView.value = 'iframe';
+                        nextTick(() => {
+                            if (selectedNode.value) sendMessageToIframe(selectedNode.value);
+                        });
+                    } else {
+                        // 非报表类型则切换到详情视图
+                        rightPanelView.value = 'details';
+                    }
+                };
+
+                const switchToDetails = () => rightPanelView.value = 'details';
+                const switchToIframe = () => {
+                    rightPanelView.value = 'iframe';
+                    nextTick(() => {
+                        // 如果视图已经在 iframe，且节点未变，则手动发送消息
+                        if (selectedNode.value) sendMessageToIframe(selectedNode.value);
+                    });
+                };
+
+                // Confirm Dialog Functions
+                const showConfirm = (title, message, confirmCallback, cancelCallback) => {
+                    confirmDialogData.value = {
+                        title,
+                        message,
+                        confirmCallback,
+                        cancelCallback
+                    };
+                    showConfirmDialog.value = true;
+                };
+
+                const confirmAction = () => {
+                    if (confirmDialogData.value.confirmCallback) {
+                        confirmDialogData.value.confirmCallback();
+                    }
+                    showConfirmDialog.value = false;
+                };
+
+                const cancelAction = () => {
+                    if (confirmDialogData.value.cancelCallback) {
+                        confirmDialogData.value.cancelCallback();
+                    }
+                    showConfirmDialog.value = false;
+                };
+
+                // Modal: Add Root
+                const openAddRootModal = () => {
+                    modalMode.value = 'add';
+                    modalForm.value = {
+                        name: '',
+                        id: '',  // 不再前端生成,等待SDK返回
+                        type: '指标报表',
+                        parentCode: '',
+                        parentName: ''
+                    };
+                    showModal.value = true;
+                    nextTick(() => nameInput.value?.focus());
+                };
+
+                // Modal: Add Child
+                const openAddChildModal = (parentNode) => {
+                    modalMode.value = 'add';
+                    modalForm.value = {
+                        name: '',
+                        id: '',  // 不再前端生成,等待SDK返回
+                        type: '指标报表',
+                        parentCode: parentNode['编号'],
+                        parentName: parentNode['节点名']
+                    };
+                    showModal.value = true;
+                    nextTick(() => nameInput.value?.focus());
+                };
+
+                // Modal: Edit
+                const openEditModal = (node) => {
+                    modalMode.value = 'edit';
+                    modalForm.value = {
+                        name: node['节点名'],
+                        id: node['编号'],
+                        type: node['节点类型'],
+                        parentCode: node['parentCode'],
+                    };
+                    showModal.value = true;
+                    nextTick(() => nameInput.value?.focus());
+                };
+
+                const closeModal = () => {
+                    showModal.value = false;
+                };
+
+                // Modal: Submit
+                const confirmModal = async () => {
+                    if (modalMode.value === 'add') {
+                        // Add Logic - Call SDK to save new node
+                        const newNode = {
+                            "编号": modalForm.value.id,
+                            "节点名": modalForm.value.name,
+                            "节点类型": modalForm.value.type,
+                            "parentCode": modalForm.value.parentCode,
+                            "json": "{}"
+                        };
+
+                        try {
+                            // 根节点不传parentCode，子节点传parentCode
+                            const saveParams = {
+                                nodeName: newNode['节点名'],
+                                nodeType: newNode['节点类型']
+                            };
+
+                            // 只有当parentCode不为空时才传入（根节点的parentCode为空）
+                            if (modalForm.value.parentCode) {
+                                saveParams.parentCode = modalForm.value.parentCode;
+                            }
+
+                            console.log('调用SDK保存新建节点:', saveParams);
+
+                            // 调用SDK保存接口（新建不传编号）
+                            const result = await callSDKSaveNode(saveParams);
+
+                            if (result && result.state === '200') {
+                                console.log('SDK保存成功，返回结果:', result);
+
+                                // 从SDK返回值中获取节点编号
+                                if (result.data && result.data.data && result.data.data['编号']) {
+                                    newNode['编号'] = result.data.data['编号'];
+                                    console.log('已使用SDK返回的编号:', result.data.data['编号']);
+                                } else {
+                                    throw new Error('SDK未返回节点编号');
+                                }
+
+                                flatList.value.push(newNode);
+                                closeModal();
+
+                                // Auto select new node
+                                nextTick(() => {
+                                    handleSelect(newNode);
+                                });
+
+                                // 显示成功通知
+                                if (typeof window.showNotification === 'function') {
+                                    window.showNotification('成功', '节点新建成功', 'success');
+                                }
+                            } else {
+                                throw new Error(result?.msg || '保存失败');
+                            }
+                        } catch (error) {
+                            console.error('SDK保存新建节点失败:', error);
+                            if (typeof window.showNotification === 'function') {
+                                window.showNotification('错误', '新建节点失败：' + error.message, 'error');
+                            } else {
+                                alert('新建节点失败：' + error.message);
+                            }
+                        }
+
+                    } else {
+                        // Edit Logic - Call SDK to save edited node
+                        try {
+                            console.log('调用SDK保存编辑节点:', {
+                                nodeId: modalForm.value.id,
+                                nodeName: modalForm.value.name,
+                                nodeType: modalForm.value.type,
+                                parentCode: modalForm.value.parentCode
+                            });
+
+                            // 调用SDK保存接口（编辑时传编号）
+                            const result = await callSDKSaveNode({
+                                nodeId: modalForm.value.id,
+                                nodeName: modalForm.value.name,
+                                nodeType: modalForm.value.type,
+                                parentCode: modalForm.value.parentCode
+                            });
+
+                            if (result && result.state === '200') {
+                                console.log('SDK保存成功，返回结果:', result);
+
+                                // 更新本地节点信息
+                                const index = flatList.value.findIndex(n => n['编号'] === modalForm.value.id);
+                                if (index !== -1) {
+                                    flatList.value[index]['节点名'] = modalForm.value.name;
+                                    flatList.value[index]['节点类型'] = modalForm.value.type;
+                                }
+
+                                closeModal();
+
+                                // 显示成功通知
+                                if (typeof window.showNotification === 'function') {
+                                    window.showNotification('成功', '节点更新成功', 'success');
+                                } else {
+                                    alert('更新成功');
+                                }
+                            } else {
+                                throw new Error(result?.msg || '保存失败');
+                            }
+                        } catch (error) {
+                            console.error('SDK保存编辑节点失败:', error);
+                            if (typeof window.showNotification === 'function') {
+                                window.showNotification('错误', '编辑节点失败：' + error.message, 'error');
+                            } else {
+                                alert('编辑节点失败：' + error.message);
+                            }
+                        }
+                    }
+                };
+
+                const handleDelete = (node) => {
+                    // 使用自定义确认对话框替代原生confirm
+                    const performDelete = async () => {
+                        try {
+                            // 收集所有要删除的节点（包括子节点）
+                            const rowCodes = [];
+                            const deleteRecursively = (uuid) => {
+                                const children = flatList.value.filter(n => n['parentCode'] === uuid);
+                                children.forEach(child => deleteRecursively(child['编号']));
+                                rowCodes.push(uuid);
+                            };
+
+                            deleteRecursively(node['编号']);
+
+                            console.log('调用SDK删除节点，参数:', {
+                                panelCode: "IML_00001",
+                                buttonName: "删除",
+                                buttonParam: {
+                                    rowCodes: rowCodes
+                                }
+                            });
+
+                            // 调用SDK删除接口
+                            const result = await sdk.api.callButton({
+                                "panelCode": "IML_00001",
+                                "buttonName": "删除",
+                                "buttonParam": {
+                                    "rowCodes": rowCodes
+                                }
+                            });
+
+                            console.log('SDK删除返回结果:', result);
+
+                            if (result && result.state === '200') {
+                                console.log('SDK删除成功');
+
+                                // 从本地列表中删除节点
+                                rowCodes.forEach(uuid => {
+                                    const index = flatList.value.findIndex(n => n['编号'] === uuid);
+                                    if (index !== -1) {
+                                        flatList.value.splice(index, 1);
+                                    }
+                                });
+
+                                // 清空选中状态
+                                if (selectedNodeId.value === node['编号']) {
+                                    selectedNodeId.value = null;
+                                    rightPanelView.value = 'details';
+                                }
+
+                                // 显示成功通知
+                                if (typeof window.showNotification === 'function') {
+                                    window.showNotification('成功', '节点删除成功', 'success');
+                                } else {
+                                    alert('删除成功');
+                                }
+                            } else {
+                                throw new Error(result?.msg || '删除失败');
+                            }
+                        } catch (error) {
+                            console.error('SDK删除节点失败:', error);
+                            if (typeof window.showNotification === 'function') {
+                                window.showNotification('错误', '删除节点失败：' + error.message, 'error');
+                            } else {
+                                alert('删除节点失败：' + error.message);
+                            }
+                        }
+                    };
+
+                    // 显示确认对话框
+                    showConfirm(
+                        '删除确认',
+                        `确定要删除 "${node['节点名']}" 及其所有子节点吗？`,
+                        performDelete
+                    );
+                };
+
+                const resetData = () => {
+                    if (confirm("确定重置为初始数据吗？")) {
+                        loadData();
+                        selectedNodeId.value = null;
+                        rightPanelView.value = 'details';
+                    }
+                };
+
+                const getNodeIcon = (type) => {
+                    if (type === '目录') return 'fa-regular fa-folder-open';
+                    if (type === '指标报表') return 'fa-solid fa-chart-pie';
+                    if (type === '明细报表') return 'fa-solid fa-table-list';
+                    return 'fa-regular fa-file';
+                };
+
+                const getNodeIconBg = (type) => {
+                    if (type === '目录') return 'bg-yellow-500';
+                    if (type === '指标报表') return 'bg-purple-500';
+                    if (type === '明细报表') return 'bg-green-500';
+                    return 'bg-gray-400';
+                };
+
+                onMounted(async () => {
+                    await loadSDKConfig();
+                    await loadData();
+                });
+
+                return {
+                    treeData,
+                    selectedNodeId,
+                    selectedNode,
+                    dataSourceType,
+                    // View State
+                    rightPanelView,
+                    iframeRef,
+                    // Modal State
+                    showModal,
+                    modalMode,
+                    modalForm,
+                    nameInput,
+                    // Confirm Dialog State
+                    showConfirmDialog,
+                    confirmDialogData,
+                    // Actions
+                    handleSelect,
+                    switchToDetails,
+                    switchToIframe,
+                    showConfirm,
+                    confirmAction,
+                    cancelAction,
+                    openAddRootModal,
+                    openAddChildModal,
+                    openEditModal,
+                    closeModal,
+                    confirmModal,
+                    handleDelete,
+                    resetData,
+                    getNodeIcon,
+                    getNodeIconBg,
+                    onIframeLoad,
+                    getDesignPageUrl,
+                    getDesignPageName
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>

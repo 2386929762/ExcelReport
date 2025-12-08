@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>查看页 - 表格预览</title>
+    <style>
+        /* 基本样式：尽量与 previewModal.css / 页面样式一致 */
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f5f5;
+            color: #222;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .topbar {
+            height: 48px;
+            background: #fff;
+            border-bottom: 1px solid #e6e6e6;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+        }
+        .topbar h1 {
+            font-size: 14px;
+            margin: 0;
+            padding: 0;
+            font-weight: 600;
+        }
+        .topbar .actions {
+            margin-left: auto;
+        }
+        .topbar button {
+            margin-left: 8px;
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            background: #fff;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .page-body {
+            flex: 1;
+            overflow: auto;
+            padding: 18px;
+            display: flex;
+            justify-content: center; /* center the table horizontally */
+            align-items: flex-start;
+        }
+
+        /* container where the exported table will be placed */
+        #view-container {
+            width: 100%;
+            max-width: 1400px;
+            box-sizing: border-box;
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+        }
+
+        /* default fallback styles for exported table if some inline styles missing */
+        #view-container table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        #view-container th, #view-container td {
+            border: 1px solid #e6e6e6;
+            padding: 8px 12px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <h1>查看页 - 报表明细</h1>
+        <div class="actions">
+            <!-- 仅保留关闭按钮，已移除“在新窗口打开”和“导出为 HTML” -->
+            <button id="close-btn">关闭</button>
+        </div>
+    </div>
+
+    <div class="page-body">
+        <div id="view-container">
+            <!-- 主页面会通过 postMessage 发送克隆后的表格 HTML 到这里 -->
+            <div style="padding:40px; text-align:center; color:#888;">等待主页面发送表格内容...</div>
+        </div>
+    </div>
+
+    <script src="js/detailViewPage.js"></script>
+</body>
+</html>

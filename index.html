@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自定义报表设计工具</title>
+    <!-- Font Awesome -->
+    <link href="css/font-awesome-4.7.0.min.css" rel="stylesheet">
+    <!-- 外部CSS引用 -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/previewModal.css">
+</head>
+
+<body>
+
+    <!-- 标题栏 -->
+    <!-- <div class="header">
+        <span>【修改】测试自定义报表 1</span>
+    </div> -->
+
+    <!-- 主体容器 -->
+    <div class="main-container" style="display: flex !important;">
+
+        <!-- 左侧面板 -->
+        <div class="left-panel" style="width: 200px !important; display: block !important; flex-shrink: 0;">
+            <div class="panel-header" onclick="toggleSection('left-panel')">
+                <h3>工具栏</h3>
+                <span id="left-panel-icon" class="collapse-icon">◀</span>
+            </div>
+            <div id="left-panel-content">
+                <!-- 维度模块已移除 -->
+                <div class="panel-section">
+                    <div class="section-header">
+                        <h3>指标</h3>
+                    </div>
+                    <div class="indicator-tree">
+                        <ul>
+                            <li class="tree-item">
+                                <span class="tree-node" onclick="toggleTreeNode(this)">
+                                    <i class="tree-icon tree-folder tree-folder-open">▸</i>
+                                    <i class="tree-folder-icon">📁</i>
+                                    <span class="tree-text">存款指标</span>
+                                </span>
+                                <ul class="tree-children">
+                                    <li class="draggable indicator-item" draggable="true" data-type="indicator"
+                                        data-name="个人存款余额">
+                                        <i class="tree-item-icon">▫</i>
+                                        <span class="tree-text">个人存款余额</span>
+                                    </li>
+                                    <li class="draggable indicator-item" draggable="true" data-type="indicator"
+                                        data-name="对公存款余额">
+                                        <i class="tree-item-icon">▫</i>
+                                        <span class="tree-text">对公存款余额</span>
+                                    </li>
+                                    <li class="draggable indicator-item" draggable="true" data-type="indicator"
+                                        data-name="总存款余额">
+                                        <i class="tree-item-icon">▫</i>
+                                        <span class="tree-text">总存款余额</span>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="tree-item">
+                                <span class="tree-node" onclick="toggleTreeNode(this)">
+                                    <i class="tree-icon tree-folder tree-folder-open">▸</i>
+                                    <i class="tree-folder-icon">📁</i>
+                                    <span class="tree-text">贷款指标</span>
+                                </span>
+                                <ul class="tree-children">
+                                    <li class="draggable indicator-item" draggable="true" data-type="indicator"
+                                        data-name="个人贷款余额">
+                                        <i class="tree-item-icon">▫</i>
+                                        <span class="tree-text">个人贷款余额</span>
+                                    </li>
+                                    <li class="draggable indicator-item" draggable="true" data-type="indicator"
+                                        data-name="对公贷款余额">
+                                        <i class="tree-item-icon">▫</i>
+                                        <span class="tree-text">对公贷款余额</span>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中间区域 -->
+        <div class="center-panel" style="flex: 1 !important; display: flex !important; flex-direction: column !important;">
+            <!-- 查询栏已移除 -->
+
+            <!-- 工具条 -->
+            <div class="toolbar">
+                <!-- 文件操作区 -->
+                <div class="toolbar-group">
+                    <button class="toolbar-btn save-btn"><i class="fa fa-save"></i></button>
+                    <button class="toolbar-btn"><i class="fa fa-download"></i></button>
+                    <button class="toolbar-btn clear-btn" title="清空配置"><i class="fa fa-trash"></i></button>
+                    <button class="toolbar-btn preview-btn" title="预览"><i class="fa fa-eye"></i></button>
+                    <button class="toolbar-btn view-page-btn" title="查看页"><i class="fa fa-external-link"></i></button>
+                </div>
+
+                <!-- 分隔线 -->
+                <div class="toolbar-divider"></div>
+
+                <!-- 格式设置区 -->
+                <div class="toolbar-group">
+                    <div class="dropdown">
+                        <button class="toolbar-btn dropdown-toggle"><i class="fa fa-table"></i></button>
+                    </div>
+                    <div class="dropdown">
+                        <button id="font-color-btn" class="toolbar-btn dropdown-toggle" title="字体颜色">
+                            <i class="fa fa-font"></i>
+                        </button>
+                        <div id="font-color-menu" class="dropdown-menu">
+                            <div class="color-picker">
+                                <div class="color-item" data-color="#000000" style="background-color: #000000;"></div>
+                                <div class="color-item" data-color="#FF0000" style="background-color: #FF0000;"></div>
+                                <div class="color-item" data-color="#0000FF" style="background-color: #0000FF;"></div>
+                                <div class="color-item" data-color="#008000" style="background-color: #008000;"></div>
+                                <div class="color-item" data-color="#FFA500" style="background-color: #FFA500;"></div>
+                                <div class="color-item" data-color="#800080" style="background-color: #800080;"></div>
+                                <div class="color-item" data-color="#FF00FF" style="background-color: #FF00FF;"></div>
+                                <div class="color-item" data-color="#00FFFF" style="background-color: #00FFFF;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dropdown">
+                        <button id="fill-color-btn" class="toolbar-btn dropdown-toggle" title="填充色"><i
+                                class="fa fa-paint-brush"></i></button>
+                        <div id="fill-color-menu" class="dropdown-menu">
+                            <div class="color-picker">
+                                <div class="color-item" data-color="#FFFFFF" style="background-color: #FFFFFF;"></div>
+                                <div class="color-item" data-color="#FFFF00" style="background-color: #FFFF00;"></div>
+                                <div class="color-item" data-color="#FFC0CB" style="background-color: #FFC0CB;"></div>
+                                <div class="color-item" data-color="#ADD8E6" style="background-color: #ADD8E6;"></div>
+                                <div class="color-item" data-color="#90EE90" style="background-color: #90EE90;"></div>
+                                <div class="color-item" data-color="#D3D3D3" style="background-color: #D3D3D3;"></div>
+                                <div class="color-item" data-color="#FFA07A" style="background-color: #FFA07A;"></div>
+                                <div class="color-item" data-color="#E6E6FA" style="background-color: #E6E6FA;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dropdown">
+                        <button id="font-size-btn" class="toolbar-btn dropdown-toggle" title="字号">
+                            <i class="fa fa-text-height"></i>
+                            <span class="font-size-value">10</span>
+                        </button>
+                        <div id="font-size-menu" class="dropdown-menu">
+                            <div class="size-picker">
+                                <div class="size-item" data-size="8">8</div>
+                                <div class="size-item" data-size="10">10</div>
+                                <div class="size-item" data-size="12">12</div>
+                                <div class="size-item" data-size="14">14</div>
+                                <div class="size-item" data-size="16">16</div>
+                                <div class="size-item" data-size="18">18</div>
+                                <div class="size-item" data-size="20">20</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 分隔线 -->
+                <div class="toolbar-divider"></div>
+
+                <!-- 文本格式区 -->
+                <div class="toolbar-group">
+                    <button id="bold-btn" class="toolbar-btn" title="加粗"><i class="fa fa-bold"></i></button>
+                    <button id="italic-btn" class="toolbar-btn" title="倾斜"><i class="fa fa-italic"></i></button>
+                    <button id="underline-btn" class="toolbar-btn" title="下划线"><i class="fa fa-underline"></i></button>
+                </div>
+
+                <!-- 分隔线 -->
+                <div class="toolbar-divider"></div>
+
+                <!-- 对齐方式区 -->
+                <div class="toolbar-group">
+                    <div class="dropdown">
+                        <button class="toolbar-btn dropdown-toggle"><i class="fa fa-list-ul"></i></button>
+                    </div>
+                    <div class="dropdown">
+                        <button class="toolbar-btn dropdown-toggle"><i class="fa fa-columns"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 单元格选中信息显示 -->
+            <div class="cell-selection-info" id="cell-selection-info">
+                <span class="cell-position">未选中任何单元格</span>
+                <div class="cell-input-container">
+                    <input type="text" class="cell-content-input" disabled placeholder="点击单元格进行编辑">
+                </div>
+            </div>
+
+            <!-- 设计区域 -->
+            <div class="design-area" style="position: relative; height: calc(100vh - 200px); overflow: hidden;">
+                <!-- 表格操作按钮 -->
+                <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 8px;">
+                    <button onclick="addRow()" class="btn-table-op" title="添加行">
+                        <i class="fa-solid fa-plus"></i> 行
+                    </button>
+                    <button onclick="addColumn()" class="btn-table-op" title="添加列">
+                        <i class="fa-solid fa-plus"></i> 列
+                    </button>
+                    <button onclick="deleteRow()" class="btn-table-op btn-danger" title="删除行">
+                        <i class="fa-solid fa-minus"></i> 行
+                    </button>
+                    <button onclick="deleteColumn()" class="btn-table-op btn-danger" title="删除列">
+                        <i class="fa-solid fa-minus"></i> 列
+                    </button>
+                </div>
+                
+                <!-- 可滚动表格容器 -->
+                <div id="table-scroll-container" style="width: 100%; height: 100%; overflow: auto; padding: 50px 10px 10px;">
+                    <table id="design-table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <script>
+                // 动态生成20x20表格
+                (function initTable() {
+                    const table = document.getElementById('design-table');
+                    const thead = table.querySelector('thead tr');
+                    const tbody = table.querySelector('tbody');
+                    
+                    // 生成列标题 A-T (20列)
+                    for (let i = 0; i < 20; i++) {
+                        const th = document.createElement('th');
+                        th.textContent = String.fromCharCode(65 + i); // A-T
+                        thead.appendChild(th);
+                    }
+                    
+                    // 生成20行
+                    for (let row = 1; row <= 20; row++) {
+                        const tr = document.createElement('tr');
+                        
+                        // 行号
+                        const rowHeader = document.createElement('td');
+                        rowHeader.textContent = row;
+                        tr.appendChild(rowHeader);
+                        
+                        // 20个可编辑单元格
+                        for (let col = 0; col < 20; col++) {
+                            const td = document.createElement('td');
+                            td.contentEditable = 'true';
+                            tr.appendChild(td);
+                        }
+                        
+                        tbody.appendChild(tr);
+                    }
+                })();
+                
+                // 添加行
+                function addRow() {
+                    const table = document.getElementById('design-table');
+                    const tbody = table.querySelector('tbody');
+                    const colCount = table.querySelector('thead tr').children.length - 1;
+                    const rowCount = tbody.children.length + 1;
+                    
+                    const tr = document.createElement('tr');
+                    const rowHeader = document.createElement('td');
+                    rowHeader.textContent = rowCount;
+                    tr.appendChild(rowHeader);
+                    
+                    for (let i = 0; i < colCount; i++) {
+                        const td = document.createElement('td');
+                        td.contentEditable = 'true';
+                        tr.appendChild(td);
+                    }
+                    
+                    tbody.appendChild(tr);
+                }
+                
+                // 添加列
+                function addColumn() {
+                    const table = document.getElementById('design-table');
+                    const thead = table.querySelector('thead tr');
+                    const tbody = table.querySelector('tbody');
+                    const colCount = thead.children.length - 1;
+                    
+                    // 添加列标题
+                    const th = document.createElement('th');
+                    if (colCount < 26) {
+                        th.textContent = String.fromCharCode(65 + colCount);
+                    } else {
+                        th.textContent = String.fromCharCode(65 + Math.floor(colCount / 26) - 1) + 
+                                        String.fromCharCode(65 + (colCount % 26));
+                    }
+                    thead.appendChild(th);
+                    
+                    // 为每行添加单元格
+                    Array.from(tbody.children).forEach(tr => {
+                        const td = document.createElement('td');
+                        td.contentEditable = 'true';
+                        tr.appendChild(td);
+                    });
+                }
+                
+                // 删除行
+                function deleteRow() {
+                    const table = document.getElementById('design-table');
+                    const tbody = table.querySelector('tbody');
+                    if (tbody.children.length > 1) {
+                        tbody.removeChild(tbody.lastElementChild);
+                    } else {
+                        alert('至少保留一行');
+                    }
+                }
+                
+                // 删除列
+                function deleteColumn() {
+                    const table = document.getElementById('design-table');
+                    const thead = table.querySelector('thead tr');
+                    const tbody = table.querySelector('tbody');
+                    
+                    if (thead.children.length > 2) { // 至少保留行号列+1个数据列
+                        thead.removeChild(thead.lastElementChild);
+                        Array.from(tbody.children).forEach(tr => {
+                            tr.removeChild(tr.lastElementChild);
+                        });
+                    } else {
+                        alert('至少保留一列');
+                    }
+                }
+            </script>
+        </div>
+        <!-- 结束 design-area -->
+    </div>
+    <!-- 结束 center-panel -->
+
+    <!-- 右侧信息栏 -->
+    <div class="right-panel" style="width: 250px !important; display: block !important; flex-shrink: 0;">
+        <div class="panel-header" onclick="toggleSection('right-panel')">
+            <span id="right-panel-icon" class="collapse-icon">▶</span>
+            <h3>单元格信息</h3>
+        </div>
+        <div id="right-panel-content">
+                <div class="cell-info" id="cell-info">
+                    <div class="info-group">
+                        <label>单元格类型:</label>
+                        <select id="cell-type">
+                            <option value="dimension">维度单元格</option>
+                            <option value="indicator" selected>指标单元格</option>
+                            <option value="text">文本单元格</option>
+                        </select>
+                    </div>
+                    <div class="info-group">
+                        <label>单元格编号:</label>
+                        <input type="text" id="cell-id" value="B3" readonly>
+                    </div>
+                    <div class="info-group">
+                        <label>来源指标:</label>
+                        <input type="text" id="cell-source" value="个人存款余额" readonly>
+                    </div>
+                    <div class="info-group">
+                        <label>数据单位:</label>
+                        <select id="cell-unit">
+                            <option value="">无</option>
+                            <option value="yuan">元</option>
+                            <option value="thousand">千元</option>
+                            <option value="million">万元</option>
+                        </select>
+                    </div>
+                    <div class="info-group">
+                        <label>显示精度:</label>
+                        <select id="cell-precision">
+                            <option>0</option>
+                            <option value="1">1</option>
+                            <option value="2" selected>2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+                    <div class="info-group">
+                        <label>计算规则:</label>
+                        <select id="cell-calc-rule">
+                            <option value="today" selected>本日</option>
+                            <option value="yesterday">昨日</option>
+                            <option value="sum">求和</option>
+                            <option value="avg">平均值</option>
+                            <option value="count">计数</option>
+                        </select>
+                    </div>
+                    <div class="info-group">
+                        <label>时间度量:</label>
+                        <select id="cell-time-unit">
+                            <option value="none" selected>无</option>
+                            <option value="day">日</option>
+                            <option value="month">月</option>
+                            <option value="quarter">季</option>
+                            <option value="year">年</option>
+                        </select>
+                    </div>
+                    <div class="info-group">
+                        <label>取值方式:</label>
+                        <select id="cell-value-type">
+                            <option value="point" selected>时点</option>
+                            <option value="period">时期</option>
+                        </select>
+                    </div>
+                    <div class="info-group">
+                        <label>数据日期:</label>
+                        <input type="date" id="cell-data-date">
+                    </div>
+                    <div class="info-group">
+                        <label>币种:</label>
+                        <select id="cell-currency">
+                            <option value="CNY">人民币(CNY)</option>
+                            <option value="USD">美元(USD)</option>
+                            <option value="EUR">欧元(EUR)</option>
+                            <option value="JPY">日元(JPY)</option>
+                            <option value="HKD">港币(HKD)</option>
+                        </select>
+                    </div>
+                    <div class="info-group">
+                        <label>机构:</label>
+                        <select id="cell-organization">
+                            <option value="head">总行</option>
+                            <option value="branch-shanghai">上海分行</option>
+                            <option value="branch-beijing">北京分行</option>
+                            <option value="branch-guangzhou">广州分行</option>
+                            <option value="branch-shenzhen">深圳分行</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 结束 right-panel -->
+    </div>
+    <!-- 结束 main-container -->
+
+    <!-- 底部操作按钮模块 -->
+    <div class="bottom-actions">
+        <div class="actions-container">
+            <button class="save-button">保存</button>
+            <button class="cancel-button">取消</button>
+        </div>
+    </div>
+
+    <!-- 预览模态框 -->
+    <div id="preview-modal" class="preview-modal">
+        <div id="modal-content" class="modal-content">
+            <div class="modal-header">
+                <h3>表格预览</h3>
+                <button id="modal-close" class="modal-close">&times;</button>
+            </div>
+            <div id="modal-body" class="modal-body">
+                <div id="preview-table-container" class="preview-table-container">
+                    <table id="preview-table" class="preview-table">
+                        <!-- 表格内容将由JavaScript动态生成 -->
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 保存模态框 -->
+    <div id="save-modal" class="preview-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>保存配置</h3>
+                <button id="save-modal-close" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="report-name">报表设计器名称:</label>
+                    <input type="text" id="report-name" placeholder="请输入报表设计器名称">
+                </div>
+                <div class="form-group">
+                    <label for="config-name">配置名称:</label>
+                    <input type="text" id="config-name" placeholder="请输入配置名称">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-confirm" class="confirm-button">保存</button>
+                <button id="save-cancel" class="cancel-button">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 外部JavaScript引用 -->
+    <script src="js/script.js"></script>
+    <script src="js/queryHandler.js"></script>
+    <script src="js/previewModule.js"></script>
+    <script src="js/configManager.js"></script>
+    <script src="js/sdkConfig.js"></script>
+    <script src="js/toolbarActions.js"></script>
+    <script src="https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk"></script>
+      <!-- <script>
+      // 根据环境动态加载 SDK
+      const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      const sdkUrl = isDev ? 'https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk' : '/wp-core/api/getPanelXSdk';
+      const script = document.createElement('script');
+      script.src = sdkUrl;
+      document.head.appendChild(script);
+    </script>
+    <!-- 加载SDK配置文件 -->
+    <script>
+        // 在应用初始化时加载SDK配置
+        if (window.SDK_CONFIG_SETTINGS) {
+            SDK_CONFIG_SETTINGS.loadFromFile('config/sdk-config.json')
+                .then(() => {
+                    console.log('SDK配置已加载');
+                    SDK_CONFIG_SETTINGS.printConfig();
+                })
+                .catch(error => {
+                    console.warn('加载SDK配置文件失败，将使用默认配置:', error);
+                });
+        }
+    </script>
+    
+    <!-- 配置接收与应用脚本 -->
+    <script>
+        // 全局保存节点信息和当前表格配置
+        window.currentNodeInfo = {
+            nodeId: null,
+            nodeName: null,
+            nodeType: null,
+            parentCode: null,
+            config: null  // 保存当前表格的config JSON
+        };
+
+        // 监听来自父窗口的消息
+        window.addEventListener('message', function(event) {
+            // 检查消息类型
+            if (event.data ) {
+                try {
+                    console.log('接收到消息:', event.data);
+                    
+                    // 保存节点信息用于保存
+                    if (event.data.nodeId !== undefined) {
+                        window.currentNodeInfo = {
+                            nodeId: event.data.nodeId || null,
+                            nodeName: event.data.nodeName || null,
+                            nodeType: event.data.type || null,
+                            parentCode: event.data.parentCode || null,
+                            config: event.data.config || null
+                        };
+                        console.log('已保存节点信息:', window.currentNodeInfo);
+                    }
+                    
+                    console.log('接收到表格配置:', event.data.config);
+                    
+                    // 等待DOM加载完成后应用配置
+                    if (document.readyState === 'complete') {
+                        applyConfigToTable(event.data.config);
+                    } else {
+                        window.addEventListener('load', function() {
+                            applyConfigToTable(event.data.config);
+                        });
+                    }
+                } catch (error) {
+                    console.error('处理表格配置时出错:', error);
+                }
+            }
+        });
+        
+        // 应用配置到表格
+        function applyConfigToTable(config) {
+            // 确保applyTableConfig函数可用
+            if (window.applyTableConfig) {
+                console.log('应用配置到表格...');
+                const success = window.applyTableConfig(config);
+                
+                if (success) {
+                    console.log('表格配置应用成功');
+                    // 如果需要，可以在这里添加额外的UI更新逻辑
+                } else {
+                    console.error('表格配置应用失败');
+                }
+            } else {
+                console.error('applyTableConfig函数不可用，请确保configManager.js已正确加载');
+            }
+        }
+    </script>
+</body>
+</html>

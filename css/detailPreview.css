@@ -1,0 +1,126 @@
+/* 预览模态框样式（更新：使克隆表格能按原样展示） */
+.preview-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.preview-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 内容外壳：尽量让内容空间大，以匹配设计区表格布局 */
+.preview-modal-content {
+    background-color: transparent; /* 透明以让克隆的表格视觉更贴近原 UI（表格本身带背景） */
+    border-radius: 6px;
+    width: 95%;
+    max-width: 1400px;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: none;
+}
+
+/* 顶部标题栏：较小且半透明背景 */
+.preview-modal-header {
+    width: 100%;
+    max-width: 1400px;
+    padding: 8px 12px;
+    border-radius: 6px 6px 0 0;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    background-color: rgba(255,255,255,0.95);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.preview-modal-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #222;
+    margin: 0 8px 0 0;
+}
+
+.preview-modal-close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #333;
+    padding: 4px 8px;
+}
+
+/* modal 主体：允许横向滚动以支持宽表格，并让内容垂直居中 */
+.preview-modal-body {
+    width: 100%;
+    max-width: 1400px;
+    max-height: calc(92vh - 48px);
+    background: rgba(255,255,255,0.98);
+    border-radius: 0 0 6px 6px;
+    overflow: auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+/* 继承页面表格样式：克隆表会保留类名，下面是 preview 专用微调 */
+.preview-cloned-table {
+    border-collapse: collapse;
+    width: auto; /* 保持原始列宽；父容器允许横向滚动 */
+    max-width: 100%;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+    background: white;
+}
+
+/* 如果设计表格的 th/td 有通用样式，保留；这里提供一些默认视觉 */
+.preview-cloned-table th, .preview-cloned-table td {
+    border: 1px solid #e6e6e6;
+    padding: 8px 12px;
+    min-width: 60px;
+    box-sizing: border-box;
+}
+
+/* 行号列 */
+.preview-cloned-table td.preview-row-num {
+    font-weight: 600;
+    text-align: center;
+    background: #f5f5f5;
+    width: 48px;
+}
+
+/* 字段单元格样式（用于填充数据的列） */
+.preview-cloned-table td.field-cell {
+    background: #fff;
+    font-weight: 500;
+}
+
+/* 保证在窄屏也能滚动查看 */
+@media (max-width: 900px) {
+    .preview-modal-content {
+        width: 98%;
+        max-width: 98%;
+    }
+    .preview-modal-body {
+        padding: 10px;
+    }
+    .preview-cloned-table th, .preview-cloned-table td {
+        padding: 6px 8px;
+        font-size: 13px;
+    }
+}

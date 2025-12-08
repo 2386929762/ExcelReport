@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报表查询树</title>
+   
+          <script src="js/tailwindcss.min.js"></script>
+    <script src="js/vue.global.prod.js"></script>
+    <link href="css/font-awesome-6.5.1-all.min.css" rel="stylesheet">
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"> -->
+    	<link href="css/inter-font.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        .tree-line {
+            position: absolute;
+            left: 11px;
+            top: 24px;
+            bottom: 0;
+            width: 1px;
+            background-color: #e2e8f0;
+            z-index: 0;
+        }
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.2s ease;
+        }
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans h-screen overflow-hidden flex flex-col">
+
+    <div id="app" v-cloak class="h-full flex flex-col relative">
+        
+        <!-- <header class="bg-white border-b border-gray-200 h-16 flex items-center px-6 shadow-sm z-10">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 text-white p-2 rounded-lg shadow-md">
+                    <i class="fa-solid fa-eye"></i>
+                </div>
+                <h1 class="text-xl font-semibold text-gray-800 tracking-tight">报表查询树</h1>
+            </div>
+        </header> -->
+
+        <main class="flex-1 flex overflow-hidden">
+            
+            <aside class="w-80 bg-white border-r border-gray-200 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-0">
+                <div class="p-4 border-b border-gray-100 bg-gray-50">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">报表列表</span>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto p-2 relative">
+                    <template v-if="treeData.length > 0">
+                        <tree-node 
+                            v-for="node in treeData" 
+                            :key="node['编号']" 
+                            :node="node" 
+                            :selected-id="selectedNodeId"
+                            @select="handleSelect"
+                        ></tree-node>
+                    </template>
+                    <div v-else class="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
+                        <i class="fa-solid fa-folder-open text-3xl mb-2 opacity-50"></i>
+                        <p>暂无数据</p>
+                    </div>
+                </div>
+            </aside>
+
+            <section class="flex-1 bg-gray-50 relative overflow-hidden flex flex-col">
+                
+                <div v-if="!selectedNode" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                    <div class="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4 text-gray-400 animate-pulse">
+                        <i class="fa-solid fa-mouse-pointer text-4xl"></i>
+                    </div>
+                    <p class="text-lg font-medium text-gray-500">请选择左侧报表查看</p>
+                </div>
+
+                <div v-else class="h-full flex flex-col">
+                    <!-- 工具栏 -->
+                    <div v-if="selectedNode && selectedNode['节点类型'] !== '目录'" class="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-2">
+                        <!-- <button 
+                            @click="openDesignPage"
+                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
+                        >
+                            <i class="fa fa-edit"></i>
+                            <span>编辑设计</span>
+                        </button> -->
+                    </div>
+                    
+                    <div class="flex-1 overflow-hidden relative">
+                        <iframe 
+                            :key="selectedNodeId"
+                            ref="iframeRef"
+                            @load="onIframeLoad"
+                            :src="getIframeSrc()" 
+                            class="w-full h-full border-0">
+                        </iframe>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+    </div>
+
+    <script type="text/x-template" id="tree-node-template">
+        <div class="relative pl-4 select-none">
+            <div v-if="depth > 0" class="tree-line"></div>
+            
+            <div 
+                class="group relative flex items-center justify-between p-2 rounded-md cursor-pointer transition-all duration-200 border border-transparent hover:bg-gray-100 mb-1"
+                :class="{'bg-blue-50 border-blue-100': isSelected}"
+                @click.stop="handleClick"
+            >
+                <div class="flex items-center gap-2 overflow-hidden">
+                    <span 
+                        v-if="isFolder" 
+                        @click.stop="toggle" 
+                        class="w-5 h-5 flex items-center justify-center rounded hover:bg-gray-200 text-gray-400 transition-colors"
+                    >
+                        <i :class="isOpen ? 'fa-solid fa-caret-down text-gray-600' : 'fa-solid fa-caret-right'"></i>
+                    </span>
+                    <span v-else class="w-5 h-5"></span>
+
+                    <i :class="[getIconClass, isSelected ? 'text-blue-600' : 'text-gray-500']" class="text-sm"></i>
+                    
+                    <span class="text-sm font-medium truncate" :class="isSelected ? 'text-blue-700' : 'text-gray-700'">
+                        {{ node['节点名'] }}
+                    </span>
+                </div>
+            </div>
+
+            <transition name="fade">
+                <div v-if="isFolder && isOpen" class="relative">
+                    <tree-node 
+                        v-for="child in node.children" 
+                        :key="child['编号']" 
+                        :node="child"
+                        :depth="depth + 1"
+                        :selected-id="selectedId"
+                        @select="$emit('select', $event)"
+                    ></tree-node>
+                </div>
+            </transition>
+        </div>
+    </script>
+
+    <script src="https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk"></script>
+
+    <script>
+        // SDK脚本无法离线访问，配置中使用本地默认URL进行开发测试
+        const { createApp, ref, computed, onMounted, nextTick } = Vue;
+
+        // 全局SDK实例和配置
+        let sdk = null;
+        let sdkConfig = {
+            devDefaultBaseUrl: 'https://demo.kwaidoo.com/zbyth/process',
+            busDomainCode: 'OctoCM_BDYTH',
+            panelCode: 'OctoCM_BDYTH_IML_00001'
+        };
+
+        // 从配置文件加载SDK配置
+        // 从配置文件加载SDK配置
+        async function loadSDKConfig() {
+            try {
+                // 获取当前页面URL的目录路径
+                const baseUrl = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+                const configUrl = baseUrl + '/config/sdk-config.json';
+                
+                const response = await fetch(configUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const config = await response.json();
+                sdkConfig.devDefaultBaseUrl = config.apiBaseUrl || sdkConfig.devDefaultBaseUrl;
+                sdkConfig.busDomainCode = config.busDomainCode || sdkConfig.busDomainCode;
+                sdkConfig.panelCode = config.panelCode || sdkConfig.panelCode;
+                console.log('SDK配置已从文件加载:', sdkConfig);
+            } catch (error) {
+                console.warn('加载SDK配置文件失败，使用默认配置:', error);
+            }
+        }
+
+        async function initializeSdkAndLogin() {
+            try {
+                if (typeof PanelXSdk === 'undefined') {
+                    sdk = null;
+                    return false;
+                }
+                sdk = new PanelXSdk({ devDefaultBaseUrl: sdkConfig.devDefaultBaseUrl, busDomainCode: sdkConfig.busDomainCode });
+                try {
+                    await sdk.user.login({ userName: 'admin', password: '123456' });
+                } catch (e) { console.warn(e); }
+                return true;
+            } catch (err) {
+                sdk = null;
+                return false;
+            }
+        }
+
+        /**
+         * 通过SDK查询节点的最新json配置
+         * @param {string} nodeCode - 节点编号
+         * @returns {Object} 查询结果，包含json配置
+         */
+        async function queryNodeConfigFromSDK(nodeCode) {
+            try {
+                if (!sdk) {
+                    await initializeSdkAndLogin();
+                }
+
+                if (!sdk || !sdk.api) {
+                    console.warn('SDK不可用');
+                    return null;
+                }
+
+                const params = {
+                    "panelCode": "IML_00001",
+                    "condition": {
+                        "code": nodeCode
+                    }
+                };
+
+                console.log('调用SDK查询节点配置，参数:', params);
+
+                const result = await sdk.api.queryFormData(params);
+
+                console.log('SDK查询结果:', result);
+
+                if (result && result.state === '200' && result.data && result.data.list && result.data.list.length > 0) {
+                    return result.data.list[0]; // 返回第一条结果
+                }
+
+                return null;
+            } catch (error) {
+                console.error('SDK查询失败:', error);
+                return null;
+            }
+        }
+
+        // --- Default Mock Data ---
+        const DEFAULT_DATA = [
+            { "编号": "000", "节点名": "父节点", "节点类型": "目录" },
+            { "编号": "002", "节点名": "测试明细 (ID: 002)", "节点类型": "明细报表", "parentCode": "000", "json": "{\"reportType\": \"detail\", \"dataKey\": \"a\"}" },
+            { "编号": "001", "节点名": "测试指标 (ID: 001)", "节点类型": "指标报表", "json": "{\"reportType\": \"indicator\", \"dataKey\": \"b\"}", "parentCode": "000" }
+        ];
+
+        // --- Tree Node Component ---
+        const TreeNode = {
+            template: '#tree-node-template',
+            name: 'TreeNode',
+            props: ['node', 'selectedId', 'depth'],
+            emits: ['select'],
+            setup(props, { emit }) {
+                const isOpen = ref(false);
+                if (props.depth === 0) isOpen.value = true;
+
+                const isFolder = computed(() => props.node['节点类型'] === '目录');
+                const isSelected = computed(() => props.node['编号'] === props.selectedId);
+                const getIconClass = computed(() => {
+                    const type = props.node['节点类型'];
+                    if (type === '目录') return isOpen.value ? 'fa-regular fa-folder-open text-yellow-500' : 'fa-regular fa-folder text-yellow-500';
+                    if (type === '指标报表') return 'fa-solid fa-chart-pie text-purple-500';
+                    if (type === '明细报表') return 'fa-solid fa-table-list text-green-500';
+                    return 'fa-regular fa-file';
+                });
+
+                const toggle = () => { if (isFolder.value) isOpen.value = !isOpen.value; };
+                const handleClick = () => {
+                    emit('select', props.node);
+                    if (isFolder.value) toggle();
+                };
+
+                return { isOpen, isFolder, isSelected, getIconClass, toggle, handleClick };
+            }
+        };
+
+        // --- Main App ---
+        createApp({
+            components: { TreeNode },
+            setup() {
+                const flatList = ref([]);
+                const selectedNodeId = ref(null);
+                const iframeRef = ref(null);
+
+                // --- Data Loading ---
+                const loadData = async () => {
+                    let finalData = [];
+                    try {
+                        if (!sdk) await initializeSdkAndLogin();
+                        if (sdk && sdk.api) {
+                            const res = await sdk.api.queryFormDataList({ panelCode: sdkConfig.panelCode });
+                            if (res?.data?.list) {
+                                finalData = res.data.list;
+                            }
+                        }
+                    } catch (e) { console.warn(e); }
+
+                    if (!finalData || finalData.length === 0) {
+                        finalData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+                    }
+
+                    flatList.value = finalData;
+                };
+
+                // --- Tree Logic ---
+                const treeData = computed(() => {
+                    const data = JSON.parse(JSON.stringify(flatList.value));
+                    const map = {};
+                    const roots = [];
+                    data.forEach(node => { node.children = []; map[node['编号']] = node; });
+                    data.forEach(node => {
+                        if (node['parentCode'] && map[node['parentCode']]) {
+                            map[node['parentCode']].children.push(node);
+                        } else {
+                            roots.push(node);
+                        }
+                    });
+                    return roots;
+                });
+
+                const selectedNode = computed(() => flatList.value.find(n => n['编号'] === selectedNodeId.value));
+
+                // 获取iframe的src，根据节点类型决定
+                const getIframeSrc = () => {
+                    if (!selectedNode.value) return './queryPreview.html';
+                    const nodeType = selectedNode.value['节点类型'];
+                    if (nodeType === '明细报表') {
+                        return './detailQueryPreview.html';
+                    }
+                    return './queryPreview.html';
+                };
+
+                // --- Iframe Communication ---
+                const sendMessageToIframe = (node) => {
+                    const iframe = iframeRef.value;
+                    if (iframe && iframe.contentWindow && node) {
+                        let configData = {};
+                        try {
+                            configData = typeof node.json === 'string' ? JSON.parse(node.json) : node.json;
+                        } catch (e) {
+                            console.warn("Error parsing JSON config:", e);
+                        }
+                        
+                        console.log('通过postMessage发送配置数据给iframe:', configData);
+
+                        // 根据节点类型发送不同的消息类型
+                        const nodeType = node['节点类型'];
+                        const messageType = nodeType === '明细报表' ? 'displayDetailTableConfig' : 'displayTableConfig';
+
+                        iframe.contentWindow.postMessage({
+                            type: messageType,
+                            config: configData,
+                            cellConfigurations: configData?.cellConfigurations || {}
+                        }, '*');
+                    }
+                };
+
+                const onIframeLoad = () => {
+                    console.log('iframe加载完成');
+                    if (selectedNode.value) {
+                        sendMessageToIframe(selectedNode.value);
+                    }
+                };
+
+                // --- Actions ---
+                const handleSelect = async (node) => {
+                    selectedNodeId.value = node['编号'];
+                    
+                    console.log('选择节点:', node['节点名']);
+                    
+                    // 如果是报表类型，则通过SDK查询获取最新配置
+                    if ((node['节点类型'] === '指标报表' || node['节点类型'] === '明细报表')) {
+                        try {
+                            console.log('开始查询节点的最新配置...');
+                            
+                            // 调用SDK查询接口
+                            const queryResult = await queryNodeConfigFromSDK(node['编号']);
+                            
+                            if (queryResult && queryResult.json) {
+                                console.log('从SDK获取到节点配置:', queryResult.json);
+                                
+                                // 解析json配置
+                                let configData = {};
+                                try {
+                                    configData = typeof queryResult.json === 'string' ? JSON.parse(queryResult.json) : queryResult.json;
+                                } catch (e) {
+                                    console.warn("解析JSON配置失败:", e);
+                                    configData = {};
+                                }
+                                
+                                // 延迟发送消息到iframe，确保iframe已加载
+                                nextTick(() => {
+                                    console.log('nextTick回调执行, iframeRef.value:', iframeRef.value);
+                                    if (iframeRef.value && iframeRef.value.contentWindow) {
+                                        console.log('通过postMessage发送配置数据给iframe:', configData);
+                                        
+                                        // 根据节点类型发送不同的消息类型
+                                        const nodeType = node['节点类型'];
+                                        const messageType = nodeType === '明细报表' ? 'displayDetailTableConfig' : 'displayTableConfig';
+                                        
+                                        iframeRef.value.contentWindow.postMessage({
+                                            type: messageType,
+                                            config: configData,
+                                            cellConfigurations: configData?.cellConfigurations || {}
+                                        }, '*');
+                                    } else {
+                                        console.warn('nextTick中iframe未就绪');
+                                    }
+                                });
+                            } else {
+                                console.warn('未从SDK获取到有效的json配置');
+                                nextTick(() => {
+                                    console.log('nextTick回调执行(无配置), iframeRef.value:', iframeRef.value);
+                                    if (iframeRef.value && iframeRef.value.contentWindow) {
+                                        iframeRef.value.contentWindow.postMessage({
+                                            type: 'displayTableConfig',
+                                            config: null,
+                                            cellConfigurations: {}
+                                        }, '*');
+                                    }
+                                });
+                            }
+                        } catch (error) {
+                            console.error('查询SDK失败:', error);
+                            nextTick(() => {
+                                console.log('nextTick回调执行(查询失败), iframeRef.value:', iframeRef.value);
+                                if (iframeRef.value && iframeRef.value.contentWindow) {
+                                    iframeRef.value.contentWindow.postMessage({
+                                        type: 'displayTableConfig',
+                                        config: null,
+                                        cellConfigurations: {}
+                                    }, '*');
+                                }
+                            });
+                        }
+                    } else {
+                        // 目录节点不显示内容
+                        console.log('这是一个目录节点，不显示预览');
+                    }
+                };
+
+                // 打开设计页面
+                const openDesignPage = () => {
+                    if (!selectedNode.value) return;
+                    
+                    const nodeType = selectedNode.value['节点类型'];
+                    const nodeCode = selectedNode.value['编号'];
+                    
+                    let designPageUrl = '';
+                    if (nodeType === '明细报表') {
+                        designPageUrl = `./expenseStatement.html?nodeCode=${encodeURIComponent(nodeCode)}`;
+                    } else if (nodeType === '指标报表') {
+                        designPageUrl = `./index.html?nodeCode=${encodeURIComponent(nodeCode)}`;
+                    }
+                    
+                    if (designPageUrl) {
+                        window.open(designPageUrl, '_blank');
+                    }
+                };
+
+                onMounted(async () => {
+                    await loadSDKConfig();
+                    await loadData();
+                });
+
+                return {
+                    treeData,
+                    selectedNodeId,
+                    selectedNode,
+                    iframeRef,
+                    handleSelect,
+                    onIframeLoad,
+                    getIframeSrc,
+                    openDesignPage
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
