@@ -805,49 +805,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 初始化拖拽项
-    const draggableItems = document.querySelectorAll('.draggable');
-    const tableCells = document.querySelectorAll('#design-table td[contenteditable="true"]');
-
-    // 设置拖拽源
-    draggableItems.forEach(item => {
-        item.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', JSON.stringify({
-                type: item.dataset.type,
-                name: item.dataset.name
-            }));
-            item.classList.add('dragging');
-        });
-
-        item.addEventListener('dragend', () => {
-            item.classList.remove('dragging');
-        });
-    });
-
-    // 设置表格单元格为放置目标
-    tableCells.forEach(cell => {
-        cell.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            cell.classList.add('drop-target');
-        });
-
-        cell.addEventListener('dragleave', () => {
-            cell.classList.remove('drop-target');
-        });
-
-        cell.addEventListener('drop', (e) => {
-            e.preventDefault();
-            cell.classList.remove('drop-target');
-
-            const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-
-            // 处理指标类型的拖拽
-            if (data.type === 'indicator') {
-                addIndicatorToTable(cell, data.name);
-            }
-        });
-    });
-
     // 启动 MutationObserver 监听设计表格变化
     observeDesignTableMutations();
 });
@@ -1247,3 +1204,272 @@ function observeDesignTableMutations() {
         attributeFilter: ['data-type', 'data-data', 'data-name', 'contenteditable']
     });
 }
+
+// 生成列标题 (A, B, C, ..., Z, AA, AB, ...)
+function getColumnLabel(index) {
+    let label = '';
+    while (index >= 0) {
+        label = String.fromCharCode(65 + (index % 26)) + label;
+        index = Math.floor(index / 26) - 1;
+    }
+    return label;
+}
+
+// 初始化表格函数
+function initializeTable(rows = 20, cols = 20) {
+    const table = document.getElementById('design-table');
+    if (!table) {
+        console.error('找不到表格元素');
+        return;
+    }
+
+    // 清空现有表格
+    table.innerHTML = '';
+
+    // 创建表头行（列标题：A, B, C...）
+    const thead = table.createTHead();
+    const headerRow = thead.insertRow();
+
+    // 左上角空单元格
+    const cornerCell = document.createElement('th');
+    cornerCell.textContent = '';
+    cornerCell.style.width = '40px';
+    cornerCell.style.minWidth = '40px';
+    headerRow.appendChild(cornerCell);
+
+    for (let i = 0; i < cols; i++) {
+        const th = document.createElement('th');
+        th.textContent = getColumnLabel(i);
+        th.style.minWidth = '120px';
+        headerRow.appendChild(th);
+    }
+
+    // 创建表体
+    const tbody = table.createTBody();
+    for (let i = 0; i < rows; i++) {
+        const row = tbody.insertRow();
+        
+        // 添加行号列
+        const rowNumCell = row.insertCell();
+        rowNumCell.textContent = i + 1;
+        rowNumCell.contentEditable = false;
+        rowNumCell.style.backgroundColor = '#f0f0f0';
+        rowNumCell.style.fontWeight = 'bold';
+        rowNumCell.style.textAlign = 'center';
+        rowNumCell.style.width = '40px';
+        rowNumCell.style.minWidth = '40px';
+
+        // 添加数据单元格
+        for (let j = 0; j < cols; j++) {
+            const cell = row.insertCell();
+            cell.contentEditable = true;
+            cell.style.minWidth = '120px';
+            
+            // 添加单元格点击事件
+            cell.addEventListener('click', function() {
+                if (currentSelectedCell && currentSelectedCell !== this) {
+                    console.log('自动保存前一个单元格配置');
+                    saveCellConfiguration();
+                }
+
+                const allCells = table.querySelectorAll('td[contenteditable="true"]');
+                allCells.forEach(c => c.classList.remove('selected'));
+                
+                this.classList.add('selected');
+                currentSelectedCell = this;
+
+                updateCellInfo(this);
+                updateCellSelectionInfo(this);
+            });
+
+            // 监听单元格内容变化
+            cell.addEventListener('input', function() {
+                if (this.classList.contains('selected')) {
+                    const inputElement = document.querySelector('.cell-content-input');
+                    if (inputElement) {
+                        inputElement.value = this.textContent || '';
+                    }
+                }
+            });
+        }
+    }
+
+    console.log(`表格初始化完成: ${rows}行 x ${cols}列`);
+}
+
+// 暴露函数到全局
+window.initializeTable = initializeTable;
+
+// 初始化拖拽功能
+function initDragAndDrop() {
+    // 初始化拖拽项
+    const draggableItems = document.querySelectorAll('.draggable');
+    const tableCells = document.querySelectorAll('#design-table td[contenteditable="true"]');
+
+    console.log('初始化拖拽功能，找到', draggableItems.length, '个拖拽项和', tableCells.length, '个单元格');
+
+    // 设置拖拽源
+    draggableItems.forEach(item => {
+        item.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', JSON.stringify({
+                type: item.dataset.type,
+                name: item.dataset.name
+            }));
+            item.classList.add('dragging');
+        });
+
+        item.addEventListener('dragend', () => {
+            item.classList.remove('dragging');
+        });
+    });
+
+    // 设置表格单元格为放置目标
+    tableCells.forEach(cell => {
+        cell.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            cell.classList.add('drop-target');
+        });
+
+        cell.addEventListener('dragleave', () => {
+            cell.classList.remove('drop-target');
+        });
+
+        cell.addEventListener('drop', (e) => {
+            e.preventDefault();
+            cell.classList.remove('drop-target');
+
+            const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+
+            // 处理指标类型的拖拽
+            if (data.type === 'indicator') {
+                addIndicatorToTable(cell, data.name);
+            }
+        });
+    });
+}
+
+// 行列添加功能
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化表格
+    initializeTable(20, 20);
+    
+    // 表格初始化后，初始化拖拽功能
+    setTimeout(() => {
+        initDragAndDrop();
+    }, 100);
+    
+    // 添加行按钮
+    const addRowBtn = document.getElementById('add-row-btn');
+    if (addRowBtn) {
+        addRowBtn.addEventListener('click', function() {
+            const table = document.getElementById('design-table');
+            if (!table) return;
+            
+            const tbody = table.tBodies[0];
+            if (!tbody) return;
+            
+            const colCount = table.rows[0].cells.length;
+            const newRow = tbody.insertRow();
+            
+            // 添加行号
+            const rowNumCell = newRow.insertCell();
+            rowNumCell.textContent = tbody.rows.length;
+            rowNumCell.contentEditable = false;
+            rowNumCell.style.backgroundColor = '#f0f0f0';
+            rowNumCell.style.fontWeight = 'bold';
+            rowNumCell.style.textAlign = 'center';
+            rowNumCell.style.width = '40px';
+            rowNumCell.style.minWidth = '40px';
+            
+            // 添加数据单元格
+            for (let i = 1; i < colCount; i++) {
+                const cell = newRow.insertCell();
+                cell.contentEditable = true;
+                cell.style.minWidth = '120px';
+                
+                cell.addEventListener('click', function() {
+                    if (currentSelectedCell && currentSelectedCell !== this) {
+                        saveCellConfiguration();
+                    }
+                    
+                    const allCells = table.querySelectorAll('td[contenteditable="true"]');
+                    allCells.forEach(c => c.classList.remove('selected'));
+                    
+                    this.classList.add('selected');
+                    currentSelectedCell = this;
+                    
+                    updateCellInfo(this);
+                    updateCellSelectionInfo(this);
+                });
+                
+                cell.addEventListener('input', function() {
+                    if (this.classList.contains('selected')) {
+                        const inputElement = document.querySelector('.cell-content-input');
+                        if (inputElement) {
+                            inputElement.value = this.textContent || '';
+                        }
+                    }
+                });
+            }
+            
+            console.log('已添加新行');
+        });
+    }
+    
+    // 添加列按钮
+    const addColBtn = document.getElementById('add-col-btn');
+    if (addColBtn) {
+        addColBtn.addEventListener('click', function() {
+            const table = document.getElementById('design-table');
+            if (!table) return;
+            
+            const thead = table.tHead;
+            const tbody = table.tBodies[0];
+            if (!thead || !tbody) return;
+            
+            const currentColCount = thead.rows[0].cells.length;
+            const newColLabel = getColumnLabel(currentColCount - 1);
+            
+            // 在表头添加新列
+            const headerRow = thead.rows[0];
+            const th = document.createElement('th');
+            th.textContent = newColLabel;
+            th.style.minWidth = '120px';
+            headerRow.appendChild(th);
+            
+            // 在每一行添加新单元格
+            for (let i = 0; i < tbody.rows.length; i++) {
+                const row = tbody.rows[i];
+                const cell = row.insertCell();
+                cell.contentEditable = true;
+                cell.style.minWidth = '120px';
+                
+                cell.addEventListener('click', function() {
+                    if (currentSelectedCell && currentSelectedCell !== this) {
+                        saveCellConfiguration();
+                    }
+                    
+                    const allCells = table.querySelectorAll('td[contenteditable="true"]');
+                    allCells.forEach(c => c.classList.remove('selected'));
+                    
+                    this.classList.add('selected');
+                    currentSelectedCell = this;
+                    
+                    updateCellInfo(this);
+                    updateCellSelectionInfo(this);
+                });
+                
+                cell.addEventListener('input', function() {
+                    if (this.classList.contains('selected')) {
+                        const inputElement = document.querySelector('.cell-content-input');
+                        if (inputElement) {
+                            inputElement.value = this.textContent || '';
+                        }
+                    }
+                });
+            }
+            
+            console.log('已添加新列:', newColLabel);
+        });
+    }
+});

@@ -182,6 +182,15 @@
                         <button class="toolbar-btn dropdown-toggle"><i class="fa fa-columns"></i></button>
                     </div>
                 </div>
+                
+                <!-- 分隔线 -->
+                <div class="toolbar-divider"></div>
+                
+                <!-- 行列操作区 -->
+                <div class="toolbar-group">
+                    <button class="toolbar-btn" id="add-row-btn" title="添加行"><i class="fa fa-plus"></i> 行</button>
+                    <button class="toolbar-btn" id="add-col-btn" title="添加列"><i class="fa fa-plus"></i> 列</button>
+                </div>
             </div>
 
             <!-- 单元格选中信息显示 -->
@@ -193,26 +202,8 @@
             </div>
 
             <!-- 设计区域 -->
-            <div class="design-area" style="position: relative; height: calc(100vh - 200px); overflow: hidden;">
-                <!-- 表格操作按钮 -->
-                <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 8px;">
-                    <button onclick="addRow()" class="btn-table-op" title="添加行">
-                        <i class="fa-solid fa-plus"></i> 行
-                    </button>
-                    <button onclick="addColumn()" class="btn-table-op" title="添加列">
-                        <i class="fa-solid fa-plus"></i> 列
-                    </button>
-                    <button onclick="deleteRow()" class="btn-table-op btn-danger" title="删除行">
-                        <i class="fa-solid fa-minus"></i> 行
-                    </button>
-                    <button onclick="deleteColumn()" class="btn-table-op btn-danger" title="删除列">
-                        <i class="fa-solid fa-minus"></i> 列
-                    </button>
-                </div>
-                
-                <!-- 可滚动表格容器 -->
-                <div id="table-scroll-container" style="width: 100%; height: 100%; overflow: auto; padding: 50px 10px 10px;">
-                    <table id="design-table">
+            <div class="design-area" id="design-area">
+                <table id="design-table">
                         <thead>
                             <tr>
                                 <th></th>
@@ -221,118 +212,7 @@
                         <tbody>
                         </tbody>
                     </table>
-                </div>
             </div>
-            
-            <script>
-                // 动态生成20x20表格
-                (function initTable() {
-                    const table = document.getElementById('design-table');
-                    const thead = table.querySelector('thead tr');
-                    const tbody = table.querySelector('tbody');
-                    
-                    // 生成列标题 A-T (20列)
-                    for (let i = 0; i < 20; i++) {
-                        const th = document.createElement('th');
-                        th.textContent = String.fromCharCode(65 + i); // A-T
-                        thead.appendChild(th);
-                    }
-                    
-                    // 生成20行
-                    for (let row = 1; row <= 20; row++) {
-                        const tr = document.createElement('tr');
-                        
-                        // 行号
-                        const rowHeader = document.createElement('td');
-                        rowHeader.textContent = row;
-                        tr.appendChild(rowHeader);
-                        
-                        // 20个可编辑单元格
-                        for (let col = 0; col < 20; col++) {
-                            const td = document.createElement('td');
-                            td.contentEditable = 'true';
-                            tr.appendChild(td);
-                        }
-                        
-                        tbody.appendChild(tr);
-                    }
-                })();
-                
-                // 添加行
-                function addRow() {
-                    const table = document.getElementById('design-table');
-                    const tbody = table.querySelector('tbody');
-                    const colCount = table.querySelector('thead tr').children.length - 1;
-                    const rowCount = tbody.children.length + 1;
-                    
-                    const tr = document.createElement('tr');
-                    const rowHeader = document.createElement('td');
-                    rowHeader.textContent = rowCount;
-                    tr.appendChild(rowHeader);
-                    
-                    for (let i = 0; i < colCount; i++) {
-                        const td = document.createElement('td');
-                        td.contentEditable = 'true';
-                        tr.appendChild(td);
-                    }
-                    
-                    tbody.appendChild(tr);
-                }
-                
-                // 添加列
-                function addColumn() {
-                    const table = document.getElementById('design-table');
-                    const thead = table.querySelector('thead tr');
-                    const tbody = table.querySelector('tbody');
-                    const colCount = thead.children.length - 1;
-                    
-                    // 添加列标题
-                    const th = document.createElement('th');
-                    if (colCount < 26) {
-                        th.textContent = String.fromCharCode(65 + colCount);
-                    } else {
-                        th.textContent = String.fromCharCode(65 + Math.floor(colCount / 26) - 1) + 
-                                        String.fromCharCode(65 + (colCount % 26));
-                    }
-                    thead.appendChild(th);
-                    
-                    // 为每行添加单元格
-                    Array.from(tbody.children).forEach(tr => {
-                        const td = document.createElement('td');
-                        td.contentEditable = 'true';
-                        tr.appendChild(td);
-                    });
-                }
-                
-                // 删除行
-                function deleteRow() {
-                    const table = document.getElementById('design-table');
-                    const tbody = table.querySelector('tbody');
-                    if (tbody.children.length > 1) {
-                        tbody.removeChild(tbody.lastElementChild);
-                    } else {
-                        alert('至少保留一行');
-                    }
-                }
-                
-                // 删除列
-                function deleteColumn() {
-                    const table = document.getElementById('design-table');
-                    const thead = table.querySelector('thead tr');
-                    const tbody = table.querySelector('tbody');
-                    
-                    if (thead.children.length > 2) { // 至少保留行号列+1个数据列
-                        thead.removeChild(thead.lastElementChild);
-                        Array.from(tbody.children).forEach(tr => {
-                            tr.removeChild(tr.lastElementChild);
-                        });
-                    } else {
-                        alert('至少保留一列');
-                    }
-                }
-            </script>
-        </div>
-        <!-- 结束 design-area -->
     </div>
     <!-- 结束 center-panel -->
 

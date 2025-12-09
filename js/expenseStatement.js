@@ -764,6 +764,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// 生成列标题 (A, B, C, ..., Z, AA, AB, ...)
+function getColumnLabel(index) {
+    let label = '';
+    while (index >= 0) {
+        label = String.fromCharCode(65 + (index % 26)) + label;
+        index = Math.floor(index / 26) - 1;
+    }
+    return label;
+}
+
 // 初始化表格函数
 function initializeTable(rows = 20, cols = 20) {
     const table = document.getElementById('design-table');
@@ -784,16 +794,6 @@ function initializeTable(rows = 20, cols = 20) {
     cornerCell.style.width = '40px';
     cornerCell.style.minWidth = '40px';
     headerRow.appendChild(cornerCell);
-
-    // 生成列标题 (A, B, C, ..., Z, AA, AB, ...)
-    function getColumnLabel(index) {
-        let label = '';
-        while (index >= 0) {
-            label = String.fromCharCode(65 + (index % 26)) + label;
-            index = Math.floor(index / 26) - 1;
-        }
-        return label;
-    }
 
     for (let i = 0; i < cols; i++) {
         const th = document.createElement('th');
@@ -863,6 +863,128 @@ function initializeTable(rows = 20, cols = 20) {
 
 // 暴露函数到全局，供其他模块使用
 window.initializeTable = initializeTable;
+
+// 行列添加功能
+document.addEventListener('DOMContentLoaded', function() {
+    // 添加行按钮
+    const addRowBtn = document.getElementById('add-row-btn');
+    if (addRowBtn) {
+        addRowBtn.addEventListener('click', function() {
+            const table = document.getElementById('design-table');
+            if (!table) return;
+            
+            const tbody = table.tBodies[0];
+            if (!tbody) return;
+            
+            const colCount = table.rows[0].cells.length;
+            const newRow = tbody.insertRow();
+            
+            // 添加行号
+            const rowNumCell = newRow.insertCell();
+            rowNumCell.textContent = tbody.rows.length;
+            rowNumCell.contentEditable = false;
+            rowNumCell.style.backgroundColor = '#f0f0f0';
+            rowNumCell.style.fontWeight = 'bold';
+            rowNumCell.style.textAlign = 'center';
+            rowNumCell.style.width = '40px';
+            rowNumCell.style.minWidth = '40px';
+            
+            // 添加数据单元格
+            for (let i = 1; i < colCount; i++) {
+                const cell = newRow.insertCell();
+                cell.contentEditable = true;
+                cell.style.minWidth = '120px';
+                
+                // 添加单元格点击事件
+                cell.addEventListener('click', function() {
+                    if (currentSelectedCell && currentSelectedCell !== this) {
+                        saveCellConfiguration();
+                    }
+                    
+                    const allCells = table.querySelectorAll('td[contenteditable="true"]');
+                    allCells.forEach(c => c.classList.remove('selected'));
+                    
+                    this.classList.add('selected');
+                    currentSelectedCell = this;
+                    
+                    updateCellInfo(this);
+                    updateCellSelectionInfo(this);
+                });
+                
+                // 监听单元格内容变化
+                cell.addEventListener('input', function() {
+                    if (this.classList.contains('selected')) {
+                        const inputElement = document.querySelector('.cell-content-input');
+                        if (inputElement) {
+                            inputElement.value = this.textContent || '';
+                        }
+                    }
+                });
+            }
+            
+            console.log('已添加新行');
+        });
+    }
+    
+    // 添加列按钮
+    const addColBtn = document.getElementById('add-col-btn');
+    if (addColBtn) {
+        addColBtn.addEventListener('click', function() {
+            const table = document.getElementById('design-table');
+            if (!table) return;
+            
+            const thead = table.tHead;
+            const tbody = table.tBodies[0];
+            if (!thead || !tbody) return;
+            
+            const currentColCount = thead.rows[0].cells.length;
+            const newColLabel = getColumnLabel(currentColCount - 1);
+            
+            // 在表头添加新列
+            const headerRow = thead.rows[0];
+            const th = document.createElement('th');
+            th.textContent = newColLabel;
+            th.style.minWidth = '120px';
+            headerRow.appendChild(th);
+            
+            // 在每一行添加新单元格
+            for (let i = 0; i < tbody.rows.length; i++) {
+                const row = tbody.rows[i];
+                const cell = row.insertCell();
+                cell.contentEditable = true;
+                cell.style.minWidth = '120px';
+                
+                // 添加单元格点击事件
+                cell.addEventListener('click', function() {
+                    if (currentSelectedCell && currentSelectedCell !== this) {
+                        saveCellConfiguration();
+                    }
+                    
+                    const allCells = table.querySelectorAll('td[contenteditable="true"]');
+                    allCells.forEach(c => c.classList.remove('selected'));
+                    
+                    this.classList.add('selected');
+                    currentSelectedCell = this;
+                    
+                    updateCellInfo(this);
+                    updateCellSelectionInfo(this);
+                });
+                
+                // 监听单元格内容变化
+                cell.addEventListener('input', function() {
+                    if (this.classList.contains('selected')) {
+                        const inputElement = document.querySelector('.cell-content-input');
+                        if (inputElement) {
+                            inputElement.value = this.textContent || '';
+                        }
+                    }
+                });
+            }
+            
+            console.log('已添加新列:', newColLabel);
+        });
+    }
+});
 
 
 
