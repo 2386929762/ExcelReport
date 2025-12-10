@@ -7,11 +7,11 @@ const SDK_CONFIG_SETTINGS = {
     // SDK脚本加载URL（可根据不同环境配置）
     sdkScriptUrls: [
         'http://183.6.70.7:24689/wp-core/api/getPanelXSdk',
-        'https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk'
+        'http://10.238.171.159:8090/wp-core/api/getPanelXSdk'
     ],
 
     // SDK API基础地址配置
-    apiBaseUrl: 'https://demo.kwaidoo.com/zbyth/process',
+    apiBaseUrl: 'http://10.238.171.159:8090',
 
     // SDK业务域代码
     busDomainCode: 'OctoCM_BDYTH',

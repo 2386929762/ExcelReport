@@ -217,7 +217,7 @@ async function initSDK() {
             
             // 从配置管理器获取配置
             const config = window.SDK_CONFIG_SETTINGS || {};
-            const apiBaseUrl = config.getApiBaseUrl?.() || 'https://demo.kwaidoo.com/zbyth/process';
+            const apiBaseUrl = config.getApiBaseUrl?.() || 'http://10.238.171.159:8090';
             const busDomainCode = config.busDomainCode || 'OctoCM_BDYTH';
             const credentials = config.credentials || { username: 'admin', password: '123456' };
             
