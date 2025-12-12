@@ -294,7 +294,7 @@
         <script>
             // 根据环境动态加载 SDK
             const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-            const sdkUrl = isDev ? 'https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk' : '/wp-core/api/getPanelXSdk';
+            const sdkUrl = isDev ? 'http://10.238.171.159:8090/wp-core/api/getPanelXSdk' : '/wp-core/api/getPanelXSdk';
             const script = document.createElement('script');
             script.src = sdkUrl;
             document.head.appendChild(script);
@@ -307,20 +307,7 @@
     <script src="js/sdkConfig.js"></script>
     <script src="js/toolbarActions.js"></script>
     
-    <!-- 加载SDK配置文件 -->
-    <script>
-        // 在应用初始化时加载SDK配置
-        if (window.SDK_CONFIG_SETTINGS) {
-            SDK_CONFIG_SETTINGS.loadFromFile('config/sdk-config.json')
-                .then(() => {
-                    console.log('SDK配置已加载');
-                    SDK_CONFIG_SETTINGS.printConfig();
-                })
-                .catch(error => {
-                    console.warn('加载SDK配置文件失败，将使用默认配置:', error);
-                });
-        }
-    </script>
+    <!-- 已移除从 sdk-config.json 读取配置的逻辑，直接使用默认配置 -->
     
     <!-- 配置接收与应用脚本 -->
     <script>
@@ -400,24 +387,9 @@
         // 记录选中的字段
         window.selectedCols = window.selectedCols || [];
 
-        // 初始化SDK
+        // 初始化SDK（使用内置默认配置，不再从外部文件读取）
         async function initializeSDK() {
             try {
-                const baseUrl = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
-                const configUrl = baseUrl + '/config/sdk-config.json';
-                
-                try {
-                    const response = await fetch(configUrl);
-                    if (response.ok) {
-                        const config = await response.json();
-                        sdkConfig.devDefaultBaseUrl = config.apiBaseUrl || sdkConfig.devDefaultBaseUrl;
-                        sdkConfig.busDomainCode = config.busDomainCode || sdkConfig.busDomainCode;
-                        console.log('SDK配置已从文件加载:', sdkConfig);
-                    }
-                } catch (error) {
-                    console.warn('加载SDK配置文件失败，使用默认配置:', error);
-                }
-
                 if (typeof PanelXSdk === 'undefined') {
                     console.error('PanelXSdk未定义，请确保SDK脚本已正确加载');
                     return false;

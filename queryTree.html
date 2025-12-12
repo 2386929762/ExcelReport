@@ -101,14 +101,17 @@
 
                 <div v-else class="h-full flex flex-col">
                     <!-- 工具栏 -->
-                    <div v-if="selectedNode && selectedNode['节点类型'] !== '目录'" class="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-2">
-                        <!-- <button 
-                            @click="openDesignPage"
-                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
+                    <div class="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-2">
+                        <button 
+                            @click="refreshTree"
+                            :disabled="refreshLoading"
+                            class="px-3 py-1.5 text-sm rounded border transition-colors flex items-center gap-2"
+                            :class="refreshLoading ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:text-blue-600'"
+                            title="刷新目录"
                         >
-                            <i class="fa fa-edit"></i>
-                            <span>编辑设计</span>
-                        </button> -->
+                            <i :class="refreshLoading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate-right'"></i>
+                            <span>{{ refreshLoading ? '刷新中' : '刷新' }}</span>
+                        </button>
                     </div>
                     
                     <div class="flex-1 overflow-hidden relative">
@@ -171,14 +174,14 @@
         <script>
             // 根据环境动态加载 SDK
             const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-            const sdkUrl = isDev ? 'https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk' : '/wp-core/api/getPanelXSdk';
+            const sdkUrl = isDev ? 'http://10.238.171.159:8090/wp-core/api/getPanelXSdk' : '/wp-core/api/getPanelXSdk';
             const script = document.createElement('script');
             script.src = sdkUrl;
             document.head.appendChild(script);
         </script>
 
     <script>
-        // SDK脚本无法离线访问，配置中使用本地默认URL进行开发测试
+        // SDK脚本无法离线访问，使用本地默认URL进行开发测试
         const { createApp, ref, computed, onMounted, nextTick } = Vue;
 
         // 全局SDK实例和配置
@@ -189,31 +192,25 @@
             panelCode: 'OctoCM_BDYTH_IML_00001'
         };
 
-        // 从配置文件加载SDK配置
-        // 从配置文件加载SDK配置
-        async function loadSDKConfig() {
-            try {
-                // 获取当前页面URL的目录路径
-                const baseUrl = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
-                const configUrl = baseUrl + '/config/sdk-config.json';
-                
-                const response = await fetch(configUrl);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                const config = await response.json();
-                sdkConfig.devDefaultBaseUrl = config.apiBaseUrl || sdkConfig.devDefaultBaseUrl;
-                sdkConfig.busDomainCode = config.busDomainCode || sdkConfig.busDomainCode;
-                sdkConfig.panelCode = config.panelCode || sdkConfig.panelCode;
-                console.log('SDK配置已从文件加载:', sdkConfig);
-            } catch (error) {
-                console.warn('加载SDK配置文件失败，使用默认配置:', error);
-            }
+        // 等待 SDK 脚本加载完成
+        function waitForSdkReady(timeoutMs = 8000, pollMs = 50) {
+            return new Promise((resolve, reject) => {
+                const start = Date.now();
+                const timer = setInterval(() => {
+                    if (typeof PanelXSdk !== 'undefined') {
+                        clearInterval(timer);
+                        resolve(true);
+                    } else if (Date.now() - start > timeoutMs) {
+                        clearInterval(timer);
+                        reject(new Error('PanelXSdk load timeout'));
+                    }
+                }, pollMs);
+            });
         }
 
         async function initializeSdkAndLogin() {
             try {
+                await waitForSdkReady();
                 if (typeof PanelXSdk === 'undefined') {
                     sdk = null;
                     return false;
@@ -224,6 +221,7 @@
                 } catch (e) { console.warn(e); }
                 return true;
             } catch (err) {
+                console.warn('等待SDK脚本失败:', err);
                 sdk = null;
                 return false;
             }
@@ -313,6 +311,7 @@
                 const flatList = ref([]);
                 const selectedNodeId = ref(null);
                 const iframeRef = ref(null);
+                const refreshLoading = ref(false);
 
                 // --- Data Loading ---
                 const loadData = async () => {
@@ -500,8 +499,21 @@
                     }
                 };
 
+                // 刷新树（重新拉取数据并清空选中）
+                const refreshTree = async () => {
+                    if (refreshLoading.value) return;
+                    refreshLoading.value = true;
+                    try {
+                        await loadData();
+                        selectedNodeId.value = null;
+                    } catch (e) {
+                        console.error('刷新失败:', e);
+                    } finally {
+                        refreshLoading.value = false;
+                    }
+                };
+
                 onMounted(async () => {
-                    await loadSDKConfig();
                     await loadData();
                 });
 
@@ -510,6 +522,8 @@
                     selectedNodeId,
                     selectedNode,
                     iframeRef,
+                    refreshLoading,
+                    refreshTree,
                     handleSelect,
                     onIframeLoad,
                     getIframeSrc,

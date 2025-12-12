@@ -6,7 +6,7 @@
 const SDK_CONFIG_SETTINGS = {
     // SDK脚本加载URL（可根据不同环境配置）
     sdkScriptUrls: [
-        'http://183.6.70.7:24689/wp-core/api/getPanelXSdk',
+        // 'http://183.6.70.7:24689/wp-core/api/getPanelXSdk',
         'http://10.238.171.159:8090/wp-core/api/getPanelXSdk'
     ],
 
@@ -79,51 +79,11 @@ const SDK_CONFIG_SETTINGS = {
     },
 
     /**
-     * 从外部配置文件加载SDK配置
-     * @param {string} configFilePath 配置文件路径
-     * @returns {Promise<Object>} 返回加载的配置对象
+     * 外部配置加载已禁用，直接返回默认配置
      */
-    async loadFromFile(configFilePath) {
-        try {
-            // 获取当前页面URL的目录路径
-            const baseUrl = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
-            const fullConfigPath = baseUrl + '/' + configFilePath.replace(/^\/+/, '');
-            
-            console.log('正在加载SDK配置文件:', fullConfigPath);
-            
-            const response = await fetch(fullConfigPath);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            const externalConfig = await response.json();
-            
-            // 合并外部配置
-            if (externalConfig.sdkScriptUrls && Array.isArray(externalConfig.sdkScriptUrls)) {
-                this.sdkScriptUrls = externalConfig.sdkScriptUrls;
-            }
-            if (externalConfig.apiBaseUrl && typeof externalConfig.apiBaseUrl === 'string') {
-                this.apiBaseUrl = externalConfig.apiBaseUrl;
-            }
-            if (externalConfig.busDomainCode && typeof externalConfig.busDomainCode === 'string') {
-                this.busDomainCode = externalConfig.busDomainCode;
-            }
-            if (externalConfig.credentials && typeof externalConfig.credentials === 'object') {
-                this.credentials = externalConfig.credentials;
-            }
-            if (externalConfig.panelCode && typeof externalConfig.panelCode === 'string') {
-                this.panelCode = externalConfig.panelCode;
-            }
-            if (externalConfig.saveButton && typeof externalConfig.saveButton === 'object') {
-                this.saveButton = externalConfig.saveButton;
-            }
-
-            console.log('SDK配置已从文件加载:', this);
-            return this;
-        } catch (error) {
-            console.error('加载SDK配置文件失败:', error);
-            console.log('将使用默认配置');
-            return this;
-        }
+    async loadFromFile() {
+        console.warn('外部 sdk-config.json 加载已禁用，继续使用内置默认配置');
+        return this;
     },
 
     /**
