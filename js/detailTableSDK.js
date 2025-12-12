@@ -1,7 +1,7 @@
 // detailTableSDK.js - 明细报表 SDK 集成模块
 
 const SDK_CONFIG = {
-    devDefaultBaseUrl: 'http://10.238.171.159:8090',
+    devDefaultBaseUrl: 'https://demo.kwaidoo.com/zbyth/process',
     busDomainCode: 'OctoCM_BDYTH',
     panelCode: 'IML_00001'
 };
