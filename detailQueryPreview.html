@@ -320,7 +320,7 @@
 						await sdk.user.login({ userName: 'admin', password: '123456' });
 						console.log('SDK登录成功');
 					} catch (e) { 
-						console.warn('SDK登录失败:', e); 
+						console.error('SDK登录失败:', e); 
 					}
 
 					return true;
@@ -1206,7 +1206,7 @@
 				const tbodies = cloneTable.tBodies && cloneTable.tBodies.length ? Array.from(cloneTable.tBodies) : [];
 				
 				if (tbodies.length === 0) {
-					console.warn('没有找到tbody，跳过行号重新编号');
+					console.error('没有找到tbody，跳过行号重新编号');
 					return;
 				}
 				
@@ -1276,7 +1276,7 @@
 										usedTables.add(tableName);
 									}
 								} catch (e) {
-									console.warn('解析单元格data失败:', e);
+									console.error('解析单元格data失败:', e);
 								}
 							}
 
@@ -1285,7 +1285,7 @@
 								try {
 									cellStyle = typeof cellInfo.style === 'string' ? JSON.parse(cellInfo.style) : cellInfo.style;
 								} catch (e) {
-									console.warn('解析单元格样式失败:', e);
+									console.error('解析单元格样式失败:', e);
 								}
 							}
 						} else {

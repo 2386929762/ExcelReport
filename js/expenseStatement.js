@@ -173,7 +173,7 @@ function formatText(formatType) {
 // 为格式化按钮添加事件监听器
 document.addEventListener('DOMContentLoaded', function () {
     console.log('expenseStatement.js: DOMContentLoaded - 开始绑定格式化按钮');
-    
+
     // 加粗按钮
     const boldBtn = document.getElementById('bold-btn');
     console.log('找到加粗按钮:', boldBtn);
@@ -303,7 +303,7 @@ function setupDropdownMenu(buttonId, menuId) {
     console.log(`setupDropdownMenu 调用: buttonId=${buttonId}, menuId=${menuId}`);
     const button = document.getElementById(buttonId);
     const menu = document.getElementById(menuId);
-    
+
     console.log(`找到按钮:`, button);
     console.log(`找到菜单:`, menu);
 
@@ -550,18 +550,18 @@ function updateCellInfo(cell) {
 
     // 获取单元格内容和元数据
     const content = cell.textContent;
-    
+
     // 为扩展列单元格提供默认值和初始化
     if (!cell.dataset.type) {
         // 确保单元格已被正确初始化
         cell.dataset.type = 'text';
         cell.dataset.name = content || cellReference;
-        
+
         // 初始化单元格配置
         if (!window.cellConfigurations) {
             window.cellConfigurations = {};
         }
-        
+
         if (!window.cellConfigurations[cellReference]) {
             window.cellConfigurations[cellReference] = {
                 type: 'text',
@@ -575,7 +575,7 @@ function updateCellInfo(cell) {
             };
         }
     }
-    
+
     // 获取单元格数据，现在确保所有单元格都有数据属性
     const type = cell.dataset.type;
     const name = cell.dataset.name || content;
@@ -720,8 +720,8 @@ function saveCellConfiguration(cellReference) {
 
 // 显示自动消失的通知
 function showNotification(message, type = 'info') {
-	const notification = document.createElement('div');
-	notification.style.cssText = `
+    const notification = document.createElement('div');
+    notification.style.cssText = `
 		position: fixed;
 		top: 20px;
 		right: 20px;
@@ -736,13 +736,13 @@ function showNotification(message, type = 'info') {
 		max-width: 400px;
 		word-wrap: break-word;
 	`;
-	notification.textContent = message;
-	
-	// 添加动画样式
-	if (!document.getElementById('notification-style')) {
-		const style = document.createElement('style');
-		style.id = 'notification-style';
-		style.textContent = `
+    notification.textContent = message;
+
+    // 添加动画样式
+    if (!document.getElementById('notification-style')) {
+        const style = document.createElement('style');
+        style.id = 'notification-style';
+        style.textContent = `
 			@keyframes slideIn {
 				from {
 					transform: translateX(400px);
@@ -764,69 +764,32 @@ function showNotification(message, type = 'info') {
 				}
 			}
 		`;
-		document.head.appendChild(style);
-	}
-	
-	document.body.appendChild(notification);
-	
-	// 3秒后自动消失
-	setTimeout(() => {
-		notification.style.animation = 'slideOut 0.3s ease-out';
-		setTimeout(() => {
-			if (notification.parentNode) {
-				notification.parentNode.removeChild(notification);
-			}
-		}, 300);
-	}, 3000);
-}
-
-// SDK实例（用于保存配置）
-let sdkInstance = null;
-
-// 初始化SDK
-async function initSDK() {
-    try {
-        if (!sdkInstance) {
-            console.log('初始化SDK...');
-            
-            // 从配置管理器获取配置
-            const config = window.SDK_CONFIG_SETTINGS || {};
-            const apiBaseUrl = config.getApiBaseUrl?.() || 'https://demo.kwaidoo.com/zbyth/process';
-            const busDomainCode = config.busDomainCode || 'OctoCM_BDYTH';
-            const credentials = config.credentials || { username: 'admin', password: '123456' };
-            
-            console.log('使用SDK配置:', { apiBaseUrl, busDomainCode });
-            
-            // 创建SDK实例
-            sdkInstance = new PanelXSdk({
-                devDefaultBaseUrl: apiBaseUrl,
-                busDomainCode: busDomainCode
-            });
-
-            // 执行登录
-            console.log('SDK登录中...');
-            await sdkInstance.user.login({
-                userName: credentials.username,
-                password: credentials.password,
-            });
-            console.log('SDK登录成功');
-        }
-        return sdkInstance;
-    } catch (error) {
-        console.error('SDK初始化或登录失败:', error);
-        throw error;
+        document.head.appendChild(style);
     }
+
+    document.body.appendChild(notification);
+
+    // 3秒后自动消失
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
 }
+
+
 
 // 调用后台保存接口
 async function callBackendSaveAPI(nodeInfo) {
     try {
         // 初始化SDK并登录
-        const sdk = await initSDK();
+        const sdk = await window.initializeSDK();
 
         // 从配置中获取保存按钮配置
-        const config = window.SDK_CONFIG_SETTINGS || {};
-        const saveButtonConfig = config.saveButton || { panelCode: 'IML_00001', buttonName: '保存' };
+        const saveButtonConfig = window.getSaveButtonConfig();
 
         // 构建表单数据
         const formData = {
@@ -942,7 +905,7 @@ if (typeof saveButtonBound === 'undefined') {
 document.addEventListener('DOMContentLoaded', () => {
     // 初始化表格
     initializeTable(20, 20);
-    
+
     // 初始化时加载所有单元格配置
     loadAllCellConfigurations();
 
@@ -982,7 +945,7 @@ function initializeTable(rows = 20, cols = 20) {
     // 创建表头行（列标题：A, B, C...）
     const thead = table.createTHead();
     const headerRow = thead.insertRow();
-    
+
     // 添加左上角空单元格
     const cornerCell = document.createElement('th');
     cornerCell.style.width = '40px';
@@ -1000,7 +963,7 @@ function initializeTable(rows = 20, cols = 20) {
     const tbody = table.createTBody();
     for (let i = 0; i < rows; i++) {
         const row = tbody.insertRow();
-        
+
         // 添加行号列
         const rowNumCell = row.insertCell();
         rowNumCell.textContent = i + 1;
@@ -1016,9 +979,9 @@ function initializeTable(rows = 20, cols = 20) {
             const cell = row.insertCell();
             cell.contentEditable = true;
             cell.style.minWidth = '120px';
-            
+
             // 添加单元格点击事件
-            cell.addEventListener('click', function() {
+            cell.addEventListener('click', function () {
                 // 自动保存当前选中单元格的配置（如果有）
                 if (currentSelectedCell && currentSelectedCell !== this) {
                     console.log('自动保存前一个单元格配置');
@@ -1028,7 +991,7 @@ function initializeTable(rows = 20, cols = 20) {
                 // 移除所有单元格的选中状态
                 const allCells = table.querySelectorAll('td[contenteditable="true"]');
                 allCells.forEach(c => c.classList.remove('selected'));
-                
+
                 // 选中当前单元格
                 this.classList.add('selected');
                 currentSelectedCell = this;
@@ -1041,7 +1004,7 @@ function initializeTable(rows = 20, cols = 20) {
             });
 
             // 监听单元格内容变化
-            cell.addEventListener('input', function() {
+            cell.addEventListener('input', function () {
                 if (this.classList.contains('selected')) {
                     const inputElement = document.querySelector('.cell-content-input');
                     if (inputElement) {
@@ -1059,20 +1022,20 @@ function initializeTable(rows = 20, cols = 20) {
 window.initializeTable = initializeTable;
 
 // 行列添加功能
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // 添加行按钮
     const addRowBtn = document.getElementById('add-row-btn');
     if (addRowBtn) {
-        addRowBtn.addEventListener('click', function() {
+        addRowBtn.addEventListener('click', function () {
             const table = document.getElementById('design-table');
             if (!table) return;
-            
+
             const tbody = table.tBodies[0];
             if (!tbody) return;
-            
+
             const colCount = table.rows[0].cells.length;
             const newRow = tbody.insertRow();
-            
+
             // 添加行号
             const rowNumCell = newRow.insertCell();
             rowNumCell.textContent = tbody.rows.length;
@@ -1082,31 +1045,31 @@ document.addEventListener('DOMContentLoaded', function() {
             rowNumCell.style.textAlign = 'center';
             rowNumCell.style.width = '40px';
             rowNumCell.style.minWidth = '40px';
-            
+
             // 添加数据单元格
             for (let i = 1; i < colCount; i++) {
                 const cell = newRow.insertCell();
                 cell.contentEditable = true;
                 cell.style.minWidth = '120px';
-                
+
                 // 添加单元格点击事件
-                cell.addEventListener('click', function() {
+                cell.addEventListener('click', function () {
                     if (currentSelectedCell && currentSelectedCell !== this) {
                         saveCellConfiguration();
                     }
-                    
+
                     const allCells = table.querySelectorAll('td[contenteditable="true"]');
                     allCells.forEach(c => c.classList.remove('selected'));
-                    
+
                     this.classList.add('selected');
                     currentSelectedCell = this;
-                    
+
                     updateCellInfo(this);
                     updateCellSelectionInfo(this);
                 });
-                
+
                 // 监听单元格内容变化
-                cell.addEventListener('input', function() {
+                cell.addEventListener('input', function () {
                     if (this.classList.contains('selected')) {
                         const inputElement = document.querySelector('.cell-content-input');
                         if (inputElement) {
@@ -1115,57 +1078,57 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
             }
-            
+
             console.log('已添加新行');
         });
     }
-    
+
     // 添加列按钮
     const addColBtn = document.getElementById('add-col-btn');
     if (addColBtn) {
-        addColBtn.addEventListener('click', function() {
+        addColBtn.addEventListener('click', function () {
             const table = document.getElementById('design-table');
             if (!table) return;
-            
+
             const thead = table.tHead;
             const tbody = table.tBodies[0];
             if (!thead || !tbody) return;
-            
+
             const currentColCount = thead.rows[0].cells.length;
             const newColLabel = getColumnLabel(currentColCount - 1);
-            
+
             // 在表头添加新列
             const headerRow = thead.rows[0];
             const th = document.createElement('th');
             th.textContent = newColLabel;
             th.style.minWidth = '120px';
             headerRow.appendChild(th);
-            
+
             // 在每一行添加新单元格
             for (let i = 0; i < tbody.rows.length; i++) {
                 const row = tbody.rows[i];
                 const cell = row.insertCell();
                 cell.contentEditable = true;
                 cell.style.minWidth = '120px';
-                
+
                 // 添加单元格点击事件
-                cell.addEventListener('click', function() {
+                cell.addEventListener('click', function () {
                     if (currentSelectedCell && currentSelectedCell !== this) {
                         saveCellConfiguration();
                     }
-                    
+
                     const allCells = table.querySelectorAll('td[contenteditable="true"]');
                     allCells.forEach(c => c.classList.remove('selected'));
-                    
+
                     this.classList.add('selected');
                     currentSelectedCell = this;
-                    
+
                     updateCellInfo(this);
                     updateCellSelectionInfo(this);
                 });
-                
+
                 // 监听单元格内容变化
-                cell.addEventListener('input', function() {
+                cell.addEventListener('input', function () {
                     if (this.classList.contains('selected')) {
                         const inputElement = document.querySelector('.cell-content-input');
                         if (inputElement) {
@@ -1174,7 +1137,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
             }
-            
+
             console.log('已添加新列:', newColLabel);
         });
     }

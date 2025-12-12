@@ -59,7 +59,7 @@ async function handleSaveConfig() {
         // 获取表格当前最新的配置
         const currentTableConfig = typeof getCurrentTableConfig === 'function' ? getCurrentTableConfig() : null;
         if (!currentTableConfig) {
-            console.warn('无法获取当前表格配置，使用空对象');
+            console.error('无法获取当前表格配置，使用空对象');
         }
 
         // 创建保存用的节点数据，包含最新的表格配置
@@ -339,7 +339,7 @@ function handleClearConfig() {
                 console.log(`已删除sessionStorage配置: ${key}`);
             });
         } catch (e) {
-            console.warn('清除会话存储时出错:', e);
+            console.error('清除会话存储时出错:', e);
         }
 
         // 3. 清除所有可能的全局配置变量

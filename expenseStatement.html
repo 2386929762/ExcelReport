@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>报表明细</title>
+    <!-- SDK Preload - Must be first -->
+    <script src="js/preload.js" devSdkUrl="http://183.6.70.7:24689/wp-core/api/getPanelXSdk"></script>
+    <script src="js/sdkConfig.js"></script>
     <!-- Font Awesome -->
     <link href="css/font-awesome-4.7.0.min.css" rel="stylesheet">
     <!-- 外部CSS引用 -->
@@ -34,13 +37,17 @@
                         <h3>数据源选择</h3>
                     </div>
                     <div style="padding: 10px;">
-                        <select id="datasource-select" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;">
+                        <select id="datasource-select"
+                            style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;">
                             <option value="">请选择数据源</option>
                         </select>
-                        <select id="schema-select" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;" disabled>
+                        <select id="schema-select"
+                            style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;"
+                            disabled>
                             <option value="">请先选择数据源</option>
                         </select>
-                        <select id="table-select" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;" disabled>
+                        <select id="table-select"
+                            style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;" disabled>
                             <option value="">请先选择Schema</option>
                         </select>
                     </div>
@@ -159,9 +166,12 @@
                 <div class="toolbar-group">
                     <button class="toolbar-btn" id="add-row-btn" title="添加行"><i class="fa fa-plus"></i> 行</button>
                     <button class="toolbar-btn" id="add-col-btn" title="添加列"><i class="fa fa-plus"></i> 列</button>
-                    <button class="toolbar-btn" id="merge-cells-btn" title="合并单元格"><i class="fa fa-object-group"></i> 合并</button>
-                    <button class="toolbar-btn" id="unmerge-cells-btn" title="取消合并"><i class="fa fa-object-ungroup"></i> 取消合并</button>
-                    <button class="toolbar-btn" id="clear-cell-btn" title="清除单元格配置"><i class="fa fa-eraser"></i> 清除</button>
+                    <button class="toolbar-btn" id="merge-cells-btn" title="合并单元格"><i class="fa fa-object-group"></i>
+                        合并</button>
+                    <button class="toolbar-btn" id="unmerge-cells-btn" title="取消合并"><i class="fa fa-object-ungroup"></i>
+                        取消合并</button>
+                    <button class="toolbar-btn" id="clear-cell-btn" title="清除单元格配置"><i class="fa fa-eraser"></i>
+                        清除</button>
                 </div>
             </div>
 
@@ -287,14 +297,6 @@
         </div>
     </div>
     <!-- 引入拖拽功能处理模块 -->
-        <script>
-            // 根据环境动态加载 SDK
-            const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-            const sdkUrl = isDev ? 'https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk' : '/wp-core/api/getPanelXSdk';
-            const script = document.createElement('script');
-            script.src = sdkUrl;
-            document.head.appendChild(script);
-        </script>
     <script src="js/dragAndDropHandler.js"></script>
     <script src="js/expenseStatement.js"></script>
     <script src="js/detailPreview.js"></script>
@@ -304,37 +306,37 @@
     <!-- <script src="js/toolbarActions.js"></script> -->
     <script src="js/cellMerge.js"></script>
     <script src="js/filterManager.js"></script>
-    
+
     <!-- 单元格编辑和清除功能 -->
     <script>
         // 初始化单元格编辑功能
         function initCellEditing() {
             const designTable = document.getElementById('design-table');
             if (!designTable) return;
-            
+
             // 为所有单元格添加双击编辑事件
-            designTable.addEventListener('dblclick', function(e) {
+            designTable.addEventListener('dblclick', function (e) {
                 const cell = e.target.closest('td');
                 if (!cell) return;
-                
+
                 // 如果已经在编辑模式，忽略
                 if (cell.querySelector('input')) return;
-                
+
                 startEditCell(cell);
             });
-            
+
             // 为所有单元格添加单击选中事件（更新顶部输入框）
-            designTable.addEventListener('click', function(e) {
+            designTable.addEventListener('click', function (e) {
                 const cell = e.target.closest('td');
                 if (!cell) return;
-                
+
                 // 如果正在编辑，不更新顶部输入框
                 if (cell.querySelector('input')) return;
-                
+
                 updateCellInput(cell);
             });
         }
-        
+
         // 开始编辑单元格
         function startEditCell(cell) {
             const currentText = cell.textContent;
@@ -347,33 +349,33 @@
             input.style.padding = '4px';
             input.style.fontSize = 'inherit';
             input.style.fontFamily = 'inherit';
-            
+
             cell.textContent = '';
             cell.appendChild(input);
             input.focus();
             input.select();
-            
+
             // 完成编辑
             function finishEdit() {
                 const newValue = input.value;
                 cell.textContent = newValue;
-                
+
                 // 更新配置
                 const cellId = cell.dataset.cellId;
                 if (cellId && window.cellConfigurations && window.cellConfigurations[cellId]) {
                     // 如果单元格已有配置，只更新文本内容
                     // 具体的配置更新逻辑可能需要根据单元格类型处理
                 }
-                
+
                 // 更新顶部输入框
                 updateCellInput(cell);
             }
-            
+
             // 失去焦点时完成编辑
             input.addEventListener('blur', finishEdit);
-            
+
             // 按Enter完成编辑
-            input.addEventListener('keydown', function(e) {
+            input.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     finishEdit();
@@ -384,7 +386,7 @@
                 }
             });
         }
-        
+
         // 更新顶部单元格输入框
         function updateCellInput(cell) {
             const cellInput = document.querySelector('.cell-content-input');
@@ -393,76 +395,76 @@
                 cellInput.disabled = false;
             }
         }
-        
+
         // 清除单元格配置
         function clearCellConfig() {
             console.log('clearCellConfig 被调用');
-            
+
             const selectedCells = document.querySelectorAll('td.selected');
             console.log('找到选中的单元格数量:', selectedCells.length);
             console.log('选中的单元格:', selectedCells);
-            
+
             if (selectedCells.length === 0) {
                 alert('请先选择要清除的单元格');
                 return;
             }
-            
+
             // 移除confirm，因为在iframe沙盒环境中不可用
             console.log(`准备清除 ${selectedCells.length} 个单元格的配置`);
-            
+
             let clearedCount = 0;
             selectedCells.forEach(cell => {
                 const cellId = cell.dataset.cellId;
                 console.log('清除单元格:', cellId, cell);
-                
+
                 // 清除配置
                 if (cellId && window.cellConfigurations) {
                     delete window.cellConfigurations[cellId];
                     console.log('删除了配置:', cellId);
                 }
-                
+
                 // 清除单元格内容
                 cell.textContent = '';
-                
+
                 // 清除样式（保留基本边框）
                 const border = cell.style.border;
                 cell.style.cssText = '';
                 if (border) cell.style.border = border;
-                
+
                 // 清除数据属性
                 delete cell.dataset.type;
                 delete cell.dataset.table;
                 delete cell.dataset.name;
                 delete cell.dataset.displayName;
-                
+
                 // 移除字段标识类名
                 cell.classList.remove('field-cell');
-                
+
                 // 取消选中
                 cell.classList.remove('selected');
-                
+
                 clearedCount++;
             });
-            
+
             console.log(`已清除 ${clearedCount} 个单元格的配置`);
             // 使用alert替代confirm，或者完全不提示
             if (clearedCount > 0) {
                 console.log(`✓ 成功清除 ${clearedCount} 个单元格`);
             }
         }
-        
+
         // 绑定清除按钮事件
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             console.log('DOMContentLoaded - 初始化单元格编辑和清除功能');
-            
+
             // 初始化单元格编辑
             initCellEditing();
-            
+
             // 绑定清除按钮
             const clearBtn = document.getElementById('clear-cell-btn');
             console.log('清除按钮元素:', clearBtn);
             if (clearBtn) {
-                clearBtn.addEventListener('click', function() {
+                clearBtn.addEventListener('click', function () {
                     console.log('清除按钮被点击');
                     clearCellConfig();
                 });
@@ -472,9 +474,9 @@
             }
         });
     </script>
-    
+
     <!-- 已移除从 sdk-config.json 读取配置的逻辑，直接使用默认配置 -->
-    
+
     <!-- 配置接收与应用脚本 -->
     <script>
         // 全局保存节点信息和当前表格配置
@@ -487,11 +489,11 @@
         };
 
         // 监听来自父窗口的消息
-        window.addEventListener('message', function(event) {
+        window.addEventListener('message', function (event) {
             if (event.data) {
                 try {
                     console.log('明细报表接收到消息:', event.data);
-                    
+
                     // 保存节点信息用于保存
                     if (event.data.nodeId !== undefined) {
                         window.currentNodeInfo = {
@@ -503,14 +505,14 @@
                         };
                         console.log('已保存明细报表节点信息:', window.currentNodeInfo);
                     }
-                    
+
                     console.log('接收到明细表格配置:', event.data.config);
-                    
+
                     // 等待DOM加载完成后应用配置
                     if (document.readyState === 'complete') {
                         applyConfigToTable(event.data.config);
                     } else {
-                        window.addEventListener('load', function() {
+                        window.addEventListener('load', function () {
                             applyConfigToTable(event.data.config);
                         });
                     }
@@ -519,18 +521,18 @@
                 }
             }
         });
-        
+
         // 应用配置到表格
         function applyConfigToTable(config) {
             console.log('收到需要应用的配置:', config);
-            
+
             // 保存配置供DOMContentLoaded使用
             initialConfigToRestore = config;
-            
+
             if (window.applyTableConfig) {
                 console.log('应用配置到明细表格...');
                 const success = window.applyTableConfig(config);
-                
+
                 if (success) {
                     console.log('明细表格配置应用成功');
                 } else {
@@ -546,45 +548,18 @@
     <script>
         // SDK实例
         let sdk = null;
-        let sdkConfig = {
-            devDefaultBaseUrl: 'https://demo.kwaidoo.com/zbyth/process',
-            busDomainCode: 'OctoCM_BDYTH'
-        };
+        // 直接使用全局配置，如果不存在则会报错
+
         // 记录选中的字段
         window.selectedCols = window.selectedCols || [];
 
-        // 初始化SDK（使用内置默认配置，不再从外部文件读取）
-        async function initializeSDK() {
-            try {
-                if (typeof PanelXSdk === 'undefined') {
-                    console.error('PanelXSdk未定义，请确保SDK脚本已正确加载');
-                    return false;
-                }
 
-                sdk = new PanelXSdk({ 
-                    devDefaultBaseUrl: sdkConfig.devDefaultBaseUrl, 
-                    busDomainCode: sdkConfig.busDomainCode 
-                });
-
-                try {
-                    await sdk.user.login({ userName: 'admin', password: '123456' });
-                    console.log('SDK登录成功');
-                } catch (e) { 
-                    console.warn('SDK登录失败:', e); 
-                }
-
-                return true;
-            } catch (err) {
-                console.error('SDK初始化失败:', err);
-                return false;
-            }
-        }
 
         // 加载数据源列表
         async function loadDataSources() {
             try {
                 if (!sdk) {
-                    const initialized = await initializeSDK();
+                    sdk = await window.initializeSDK();
                     if (!initialized) {
                         console.error('SDK初始化失败，无法加载数据源');
                         return;
@@ -604,7 +579,7 @@
                 if (result && result.state === '200' && result.data && result.data.list) {
                     const datasourceSelect = document.getElementById('datasource-select');
                     datasourceSelect.innerHTML = '<option value="">请选择数据源</option>';
-                    
+
                     result.data.list.forEach(ds => {
                         const option = document.createElement('option');
                         option.value = ds['数据源名称'];
@@ -683,7 +658,7 @@
                 const schemaSelect = document.getElementById('schema-select');
                 schemaSelect.innerHTML = '<option value="">加载中...</option>';
                 schemaSelect.disabled = true;
-                
+
                 console.log('开始查询数据源[' + datasourceName + ']的Schema列表...');
                 const params = {
                     "panelCode": "IML_00003",
@@ -698,7 +673,7 @@
                     // 过滤出属于当前数据源的表
                     const tables = result.data.list.filter(table => table['数据源名称'] === datasourceName);
                     console.log('当前数据源的表:', tables);
-                    
+
                     // 提取唯一的schema名称
                     const schemaSet = new Set();
                     tables.forEach(table => {
@@ -706,10 +681,10 @@
                             schemaSet.add(table['模式名']);
                         }
                     });
-                    
+
                     const schemas = Array.from(schemaSet).sort();
                     console.log('提取的Schema列表:', schemas);
-                    
+
                     schemaSelect.innerHTML = '<option value="">请选择Schema</option>';
                     schemas.forEach(schema => {
                         const option = document.createElement('option');
@@ -718,7 +693,7 @@
                         schemaSelect.appendChild(option);
                     });
                     schemaSelect.disabled = false;
-                    
+
                     console.log('Schema列表已加载,共' + schemas.length + '个');
                 } else {
                     console.error('表管理查询失败:', result);
@@ -762,19 +737,19 @@
         // 渲染字段列表
         function renderFieldList(fields, tableName) {
             const container = document.getElementById('field-list-container');
-            
+
             if (!fields || fields.length === 0) {
                 container.innerHTML = '<li style="text-align: center; color: #999; padding: 20px;">该表没有字段</li>';
                 return;
             }
 
             container.innerHTML = '';
-            
+
             // 初始化或重置 window.allFields
             if (!window.allFields) {
                 window.allFields = [];
             }
-            
+
             // 清空之前的字段数据，重新填充
             window.allFields = [];
 
@@ -788,25 +763,25 @@
                 fieldItem.style.cursor = 'move';
                 fieldItem.style.borderBottom = '1px solid #eee';
                 fieldItem.style.listStyle = 'none';
-                
-                const fieldDisplayName = field['字段中文名'] ? 
-                    field['字段中文名'] + ' (' + field['字段名'] + ')' : 
+
+                const fieldDisplayName = field['字段中文名'] ?
+                    field['字段中文名'] + ' (' + field['字段名'] + ')' :
                     field['字段名'];
-                
+
                 fieldItem.innerHTML = `
                     <i class="tree-item-icon" style="margin-right: 8px;">📄</i>
                     <span class="tree-text">${fieldDisplayName}</span>
                 `;
 
-                fieldItem.addEventListener('mouseenter', function() {
+                fieldItem.addEventListener('mouseenter', function () {
                     this.style.backgroundColor = '#f0f0f0';
                 });
-                fieldItem.addEventListener('mouseleave', function() {
+                fieldItem.addEventListener('mouseleave', function () {
                     this.style.backgroundColor = '';
                 });
 
                 container.appendChild(fieldItem);
-                
+
                 // 保存字段信息到 window.allFields，供保存配置时使用
                 window.allFields.push({
                     name: field['字段名'],
@@ -825,13 +800,13 @@
 
         // 页面加载完成后初始化
         let initialConfigToRestore = null;  // 用于存储需要恢复的配置
-        
-        document.addEventListener('DOMContentLoaded', function() {
+
+        document.addEventListener('DOMContentLoaded', function () {
             console.log('页面加载完成，开始初始化数据源');
-            
-            setTimeout(async function() {
+
+            setTimeout(async function () {
                 await loadDataSources();
-                
+
                 // 优先使用从postMessage传来的配置(存储在initialConfigToRestore中)
                 let configToUse = initialConfigToRestore?.detailReportConfig || window.currentNodeInfo?.config;
 
@@ -851,7 +826,7 @@
                     }
                     window.currentNodeInfo.config.filterFields = configToUse.filterFields;
                     console.log('已恢复过滤字段配置:', configToUse.filterFields);
-                    
+
                     // 触发filterManager重新加载过滤字段
                     if (window.filterManager && typeof window.filterManager.loadFilterFields === 'function') {
                         setTimeout(() => {
@@ -867,7 +842,7 @@
                         datasourceSelect.value = configToUse.selectedDataSource;
                         console.log('已恢复数据源选择:', configToUse.selectedDataSource);
                         await loadSchemasByDataSource(configToUse.selectedDataSource);
-                        
+
                         if (configToUse.selectedSchema) {
                             const schemaSelect = document.getElementById('schema-select');
                             const schemaOption = Array.from(schemaSelect.options).find(opt => opt.value === configToUse.selectedSchema);
@@ -875,7 +850,7 @@
                                 schemaSelect.value = configToUse.selectedSchema;
                                 console.log('已恢复Schema选择:', configToUse.selectedSchema);
                                 await loadTablesByDataSource(configToUse.selectedDataSource, configToUse.selectedSchema);
-                                
+
                                 if (configToUse.selectedTable) {
                                     const tableSelect = document.getElementById('table-select');
                                     const tableOption = Array.from(tableSelect.options).find(opt => opt.value === configToUse.selectedTable);
@@ -891,23 +866,23 @@
                 }
             }, 500);
 
-            document.getElementById('datasource-select').addEventListener('change', async function(e) {
+            document.getElementById('datasource-select').addEventListener('change', async function (e) {
                 const datasourceName = e.target.value;
                 console.log('选择数据源:', datasourceName);
-                
+
                 const schemaSelect = document.getElementById('schema-select');
                 const tableSelect = document.getElementById('table-select');
-                
+
                 schemaSelect.innerHTML = '<option value="">请先选择数据源</option>';
                 schemaSelect.disabled = true;
                 tableSelect.innerHTML = '<option value="">请先选择Schema</option>';
                 tableSelect.disabled = true;
-                document.getElementById('field-list-container').innerHTML = 
+                document.getElementById('field-list-container').innerHTML =
                     '<li style="text-align: center; color: #999; padding: 20px;">请选择表加载字段</li>';
-                
+
                 if (datasourceName) {
                     await loadSchemasByDataSource(datasourceName);
-                    
+
                     if (window.currentNodeInfo) {
                         if (!window.currentNodeInfo.config) {
                             window.currentNodeInfo.config = {};
@@ -921,21 +896,21 @@
                 }
             });
 
-            document.getElementById('schema-select').addEventListener('change', async function(e) {
+            document.getElementById('schema-select').addEventListener('change', async function (e) {
                 const schemaName = e.target.value;
                 console.log('选择Schema:', schemaName);
-                
+
                 const datasourceName = document.getElementById('datasource-select').value;
                 const tableSelect = document.getElementById('table-select');
-                
+
                 tableSelect.innerHTML = '<option value="">请先选择Schema</option>';
                 tableSelect.disabled = true;
-                document.getElementById('field-list-container').innerHTML = 
+                document.getElementById('field-list-container').innerHTML =
                     '<li style="text-align: center; color: #999; padding: 20px;">请选择表加载字段</li>';
-                
+
                 if (schemaName && datasourceName) {
                     await loadTablesByDataSource(datasourceName, schemaName);
-                    
+
                     if (window.currentNodeInfo) {
                         if (!window.currentNodeInfo.config) {
                             window.currentNodeInfo.config = {};
@@ -948,15 +923,15 @@
                 }
             });
 
-            document.getElementById('table-select').addEventListener('change', function(e) {
+            document.getElementById('table-select').addEventListener('change', function (e) {
                 const tableName = e.target.value;
                 console.log('选择表:', tableName);
-                
+
                 if (tableName) {
                     loadFieldsByTable(tableName);
                     // 清空之前选中的字段
                     window.selectedCols = [];
-                    
+
                     if (window.currentNodeInfo) {
                         if (!window.currentNodeInfo.config) {
                             window.currentNodeInfo.config = {};
@@ -965,11 +940,12 @@
                         console.log('已保存表选择:', tableName);
                     }
                 } else {
-                    document.getElementById('field-list-container').innerHTML = 
+                    document.getElementById('field-list-container').innerHTML =
                         '<li style="text-align: center; color: #999; padding: 20px;">请选择表加载字段</li>';
                 }
             });
         });
     </script>
 </body>
+
 </html>

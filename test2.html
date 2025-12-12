@@ -468,10 +468,10 @@
                 sdk = new PanelXSdk({ devDefaultBaseUrl: sdkConfig.devDefaultBaseUrl, busDomainCode: sdkConfig.busDomainCode });
                 try {
                     await sdk.user.login({ userName: 'admin', password: '123456' });
-                } catch (e) { console.warn(e); }
+                } catch (e) { console.error(e); }
                 return true;
             } catch (err) {
-                console.warn('等待SDK脚本失败:', err);
+                console.error('等待SDK脚本失败:', err);
                 sdk = null;
                 return false;
             }
@@ -621,7 +621,7 @@
                                 source = 'SDK 数据';
                             }
                         }
-                    } catch (e) { console.warn(e); }
+                    } catch (e) { console.error(e); }
 
                     if ((!finalData || finalData.length === 0) && typeof externalJsonData !== 'undefined' && externalJsonData?.data?.list) {
                         finalData = externalJsonData.data.list;
@@ -683,7 +683,7 @@
                         try {
                             configData = typeof node.json === 'string' ? JSON.parse(node.json) : node.json;
                         } catch (e) {
-                            console.warn("Error parsing JSON config:", e);
+                            console.error("Error parsing JSON config:", e);
                             configData = {};
                         }
 
@@ -764,7 +764,7 @@
                                         }
                                     });
                                 } else {
-                                    console.warn('查询未返回有效数据，使用本地节点信息');
+                                    console.error('查询未返回有效数据，使用本地节点信息');
                                     rightPanelView.value = 'iframe';
                                     nextTick(() => {
                                         if (selectedNode.value) sendMessageToIframe(selectedNode.value);

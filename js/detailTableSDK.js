@@ -1,42 +1,6 @@
 // detailTableSDK.js - 明细报表 SDK 集成模块
 
-const SDK_CONFIG = {
-    devDefaultBaseUrl: 'https://demo.kwaidoo.com/zbyth/process',
-    busDomainCode: 'OctoCM_BDYTH',
-    panelCode: 'IML_00001'
-};
-
-let sdkInstance = null;
 let currentNodeCode = null;
-
-/**
- * 初始化 SDK 并登录
- */
-async function initDetailTableSDK() {
-    try {
-        if (typeof PanelXSdk === 'undefined') {
-            console.warn('PanelXSdk 未加载');
-            return false;
-        }
-
-        sdkInstance = new PanelXSdk({
-            devDefaultBaseUrl: SDK_CONFIG.devDefaultBaseUrl,
-            busDomainCode: SDK_CONFIG.busDomainCode
-        });
-
-        try {
-            await sdkInstance.user.login({ userName: 'admin', password: '123456' });
-            console.log('SDK 登录成功');
-        } catch (e) {
-            console.warn('SDK 登录失败:', e);
-        }
-
-        return true;
-    } catch (err) {
-        console.error('初始化 SDK 失败:', err);
-        return false;
-    }
-}
 
 /**
  * 从 URL 参数获取节点编号
@@ -67,12 +31,12 @@ function getCurrentDetailTableConfig() {
         if (trimmedContent === '' || /^[0-9]+$/.test(trimmedContent) || /^[A-Z]+$/.test(trimmedContent)) {
             return false;
         }
-        
+
         // 检查是否有特殊类型
         if (cell.dataset.type && cell.dataset.type !== 'text' && cell.dataset.type !== '') {
             return true;
         }
-        
+
         // 检查是否有数据属性
         for (let i = 0; i < cell.attributes.length; i++) {
             const attr = cell.attributes[i];
@@ -80,13 +44,13 @@ function getCurrentDetailTableConfig() {
                 return true;
             }
         }
-        
+
         // 检查是否有显式设置的样式
         if (cell.style.fontWeight && cell.style.fontWeight !== '') return true;
         if (cell.style.fontSize && cell.style.fontSize !== '') return true;
         if (cell.style.backgroundColor && cell.style.backgroundColor !== '') return true;
         if (cell.style.color && cell.style.color !== '') return true;
-        
+
         return false;
     }
 
@@ -94,28 +58,28 @@ function getCurrentDetailTableConfig() {
     const table = document.getElementById('design-table');
     if (table) {
         const rows = table.querySelectorAll('tr');
-        
+
         rows.forEach((row, rowIndex) => {
             const rowData = [];
             const cells = row.querySelectorAll('td, th');
             let rowHasConfiguredCells = false;
-            
+
             cells.forEach((cell, cellIndex) => {
                 // 跳过行号列
                 if (cellIndex === 0 && cell.tagName === 'TD' && /^[0-9]+$/.test(cell.textContent.trim())) {
                     return;
                 }
-                
+
                 // 获取单元格内容
                 const cellContent = cell.textContent || '';
-                
+
                 // 只处理已配置的单元格
                 if (!isCellConfigured(cell, cellContent)) {
                     return;
                 }
-                
+
                 rowHasConfiguredCells = true;
-                
+
                 // 只保存显式设置的样式
                 const cellData = {
                     value: cellContent.trim(),
@@ -123,7 +87,7 @@ function getCurrentDetailTableConfig() {
                     rowIndex: rowIndex,
                     cellIndex: cellIndex
                 };
-                
+
                 // 只保存显式设置的样式
                 const inlineStyles = {};
                 if (cell.style.fontWeight && cell.style.fontWeight !== '') {
@@ -147,7 +111,7 @@ function getCurrentDetailTableConfig() {
                 if (cell.style.textDecoration && cell.style.textDecoration !== '') {
                     inlineStyles.textDecoration = cell.style.textDecoration;
                 }
-                
+
                 // 只有在有样式时才添加style属性
                 if (Object.keys(inlineStyles).length > 0) {
                     cellData.style = inlineStyles;
@@ -164,14 +128,14 @@ function getCurrentDetailTableConfig() {
 
                 rowData.push(cellData);
             });
-            
+
             // 只有当行有配置的单元格时才添加到tableData
             if (rowHasConfiguredCells) {
                 tableConfig.tableData.push(rowData);
             }
         });
     }
-    
+
     console.log(`收集到 ${tableConfig.tableData.length} 行已配置的明细表格数据`);
     return tableConfig;
 }
@@ -193,40 +157,40 @@ function applyDetailTableConfig(config) {
         }
 
         const rows = table.querySelectorAll('tr');
-        
+
         // 应用配置到表格
         config.tableData.forEach((rowData, rowIndex) => {
             if (rowIndex < rows.length) {
                 const row = rows[rowIndex];
                 const cells = row.querySelectorAll('td, th');
-                
+
                 rowData.forEach((cellData, cellIndex) => {
                     if (cellIndex < cells.length && cellData) {
                         const cell = cells[cellIndex];
-                        
+
                         // 应用单元格内容
                         if (cellData.value !== undefined) {
                             cell.textContent = cellData.value;
                         }
-                        
+
                         // 应用数据属性
                         if (cellData.type) {
                             cell.dataset.type = cellData.type;
                         }
-                        
+
                         if (cellData.data) {
                             if (cellData.data.table) cell.dataset.table = cellData.data.table;
                             if (cellData.data.field) cell.dataset.name = cellData.data.field;
                             if (cellData.data.displayName) cell.dataset.displayName = cellData.data.displayName;
                         }
-                        
+
                         // 应用样式
                         if (cellData.style && typeof cellData.style === 'object') {
                             Object.keys(cellData.style).forEach(styleProp => {
                                 try {
                                     cell.style[styleProp] = cellData.style[styleProp];
                                 } catch (e) {
-                                    console.warn(`无法应用样式 ${styleProp}:`, e);
+                                    console.warn(`无法应用样式 ${styleProp}: `, e);
                                 }
                             });
                         }
@@ -263,12 +227,12 @@ async function loadDetailConfigFromSDK(nodeCode) {
 
     try {
         const params = {
-            panelCode: SDK_CONFIG.panelCode,
+            panelCode: window.getSaveButtonConfig().panelCode,
             condition: { code: nodeCode }
         };
 
         console.log('从 SDK 查询配置，参数:', params);
-        const result = await sdkInstance.api.queryFormData(params);
+        const result = await window.sdkInstance.api.queryFormData(params);
         console.log('SDK 查询结果:', result);
 
         if (result && result.state === '200' && result.data && result.data.list && result.data.list.length > 0) {
@@ -313,9 +277,9 @@ async function saveDetailConfigToSDK(nodeCode, config) {
 
     try {
         const jsonString = JSON.stringify(config);
-        
+
         const params = {
-            panelCode: SDK_CONFIG.panelCode,
+            panelCode: window.getSaveButtonConfig().panelCode,
             condition: { code: nodeCode },
             data: {
                 code: nodeCode,
@@ -324,7 +288,7 @@ async function saveDetailConfigToSDK(nodeCode, config) {
         };
 
         console.log('保存配置到 SDK，参数:', params);
-        const result = await sdkInstance.api.saveFormData(params);
+        const result = await window.sdkInstance.api.saveFormData(params);
         console.log('SDK 保存结果:', result);
 
         if (result && result.state === '200') {
@@ -348,14 +312,14 @@ async function saveDetailConfigToSDK(nodeCode, config) {
  */
 async function handleDetailTableSave() {
     console.log('保存明细表格配置');
-    
+
     // 获取当前配置
     const config = getCurrentDetailTableConfig();
     console.log('当前配置:', config);
-    
+
     // 获取节点编号
     const nodeCode = currentNodeCode || getNodeCodeFromURL();
-    
+
     if (!nodeCode) {
         // 如果没有节点编号，导出为 JSON 文件
         console.log('未找到节点编号，导出为 JSON 文件');
@@ -366,7 +330,7 @@ async function handleDetailTableSave() {
         }
         return;
     }
-    
+
     // 保存到 SDK
     await saveDetailConfigToSDK(nodeCode, config);
 }
@@ -374,16 +338,16 @@ async function handleDetailTableSave() {
 /**
  * 页面加载时初始化
  */
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function () {
     console.log('明细报表 SDK 模块初始化');
-    
+
     // 初始化 SDK
-    await initDetailTableSDK();
-    
+    await window.initializeSDK();
+
     // 尝试从 URL 获取节点编号
     currentNodeCode = getNodeCodeFromURL();
     console.log('当前节点编号:', currentNodeCode);
-    
+
     // 如果有节点编号，加载配置
     if (currentNodeCode) {
         const config = await loadDetailConfigFromSDK(currentNodeCode);
@@ -391,11 +355,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             applyDetailTableConfig(config);
         }
     }
-    
+
     // 绑定保存按钮
     const saveButtons = document.querySelectorAll('.save-button, .save-btn');
     saveButtons.forEach(btn => {
-        btn.addEventListener('click', function(e) {
+        btn.addEventListener('click', function (e) {
             e.preventDefault();
             handleDetailTableSave();
         });

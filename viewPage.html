@@ -90,7 +90,7 @@
                             throw new Error('不支持的 tableData 格式');
                         }
                     } catch (e) {
-                        console.warn('无法保存 tableData 到 localStorage:', e);
+                        console.error('无法保存 tableData 到 localStorage:', e);
                         // 仍然渲染
                         if (Array.isArray(parsed)) renderTableData({ rows: parsed });
                         else renderTableData(parsed);

@@ -214,10 +214,10 @@
                 sdk = new PanelXSdk({ devDefaultBaseUrl: sdkConfig.devDefaultBaseUrl, busDomainCode: sdkConfig.busDomainCode });
                 try {
                     await sdk.user.login({ userName: 'admin', password: '123456' });
-                } catch (e) { console.warn(e); }
+                } catch (e) { console.error(e); }
                 return true;
             } catch (err) {
-                console.warn('等待SDK脚本失败:', err);
+                console.error('等待SDK脚本失败:', err);
                 sdk = null;
                 return false;
             }
@@ -235,7 +235,7 @@
                 }
 
                 if (!sdk || !sdk.api) {
-                    console.warn('SDK不可用');
+                    console.error('SDK不可用');
                     return null;
                 }
 
@@ -324,7 +324,7 @@
                                 finalData = res.data.list;
                             }
                         }
-                    } catch (e) { console.warn(e); }
+                    } catch (e) { console.error(e); }
 
                     if (!finalData || finalData.length === 0) {
                         finalData = JSON.parse(JSON.stringify(DEFAULT_DATA));
@@ -369,7 +369,7 @@
                         try {
                             configData = typeof node.json === 'string' ? JSON.parse(node.json) : node.json;
                         } catch (e) {
-                            console.warn("Error parsing JSON config:", e);
+                            console.error("Error parsing JSON config:", e);
                         }
                         
                         // 将节点编号添加到配置中作为reportCode
@@ -418,7 +418,7 @@
                                 try {
                                     configData = typeof queryResult.json === 'string' ? JSON.parse(queryResult.json) : queryResult.json;
                                 } catch (e) {
-                                    console.warn("解析JSON配置失败:", e);
+                                    console.error("解析JSON配置失败:", e);
                                     configData = {};
                                 }
                                 
@@ -441,11 +441,11 @@
                                             cellConfigurations: configData?.cellConfigurations || {}
                                         }, '*');
                                     } else {
-                                        console.warn('nextTick中iframe未就绪');
+                                        console.error('nextTick中iframe未就绪');
                                     }
                                 });
                             } else {
-                                console.warn('未从SDK获取到有效的json配置');
+                                console.error('未从SDK获取到有效的json配置');
                                 nextTick(() => {
                                     console.log('nextTick回调执行(无配置), iframeRef.value:', iframeRef.value);
                                     if (iframeRef.value && iframeRef.value.contentWindow) {

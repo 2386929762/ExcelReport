@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>自定义报表设计工具</title>
+    <!-- SDK Preload - Must be first -->
+    <script src="js/preload.js" devSdkUrl="http://183.6.70.7:24689/wp-core/api/getPanelXSdk"></script>
     <!-- Font Awesome -->
     <link href="css/font-awesome-4.7.0.min.css" rel="stylesheet">
     <!-- 外部CSS引用 -->
@@ -86,7 +88,8 @@
         </div>
 
         <!-- 中间区域 -->
-        <div class="center-panel" style="flex: 1 !important; display: flex !important; flex-direction: column !important;">
+        <div class="center-panel"
+            style="flex: 1 !important; display: flex !important; flex-direction: column !important;">
             <!-- 查询栏已移除 -->
 
             <!-- 工具条 -->
@@ -182,10 +185,10 @@
                         <button class="toolbar-btn dropdown-toggle"><i class="fa fa-columns"></i></button>
                     </div>
                 </div>
-                
+
                 <!-- 分隔线 -->
                 <div class="toolbar-divider"></div>
-                
+
                 <!-- 行列操作区 -->
                 <div class="toolbar-group">
                     <button class="toolbar-btn" id="add-row-btn" title="添加行"><i class="fa fa-plus"></i> 行</button>
@@ -204,25 +207,25 @@
             <!-- 设计区域 -->
             <div class="design-area" id="design-area">
                 <table id="design-table">
-                        <thead>
-                            <tr>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                    </table>
+                    <thead>
+                        <tr>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
             </div>
-    </div>
-    <!-- 结束 center-panel -->
-
-    <!-- 右侧信息栏 -->
-    <div class="right-panel" style="width: 250px !important; display: block !important; flex-shrink: 0;">
-        <div class="panel-header" onclick="toggleSection('right-panel')">
-            <span id="right-panel-icon" class="collapse-icon">▶</span>
-            <h3>单元格信息</h3>
         </div>
-        <div id="right-panel-content">
+        <!-- 结束 center-panel -->
+
+        <!-- 右侧信息栏 -->
+        <div class="right-panel" style="width: 250px !important; display: block !important; flex-shrink: 0;">
+            <div class="panel-header" onclick="toggleSection('right-panel')">
+                <span id="right-panel-icon" class="collapse-icon">▶</span>
+                <h3>单元格信息</h3>
+            </div>
+            <div id="right-panel-content">
                 <div class="cell-info" id="cell-info">
                     <div class="info-group">
                         <label>单元格类型:</label>
@@ -341,7 +344,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- 保存模态框 -->
     <div id="save-modal" class="preview-modal">
         <div class="modal-content">
@@ -373,24 +376,7 @@
     <script src="js/configManager.js"></script>
     <script src="js/sdkConfig.js"></script>
     <script src="js/toolbarActions.js"></script>
-        <script>
-            // 根据环境动态加载 SDK
-            const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-            const sdkUrl = isDev ? 'https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk' : '/wp-core/api/getPanelXSdk';
-            const script = document.createElement('script');
-            script.src = sdkUrl;
-            document.head.appendChild(script);
-        </script>
-      <!-- <script>
-      // 根据环境动态加载 SDK
-      const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    const sdkUrl = isDev ? 'https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk' : '/wp-core/api/getPanelXSdk';
-      const script = document.createElement('script');
-      script.src = sdkUrl;
-      document.head.appendChild(script);
-    </script>
-    <!-- 已移除从 sdk-config.json 读取配置的逻辑，直接使用默认配置 -->
-    
+
     <!-- 配置接收与应用脚本 -->
     <script>
         // 全局保存节点信息和当前表格配置
@@ -403,12 +389,12 @@
         };
 
         // 监听来自父窗口的消息
-        window.addEventListener('message', function(event) {
+        window.addEventListener('message', function (event) {
             // 检查消息类型
-            if (event.data ) {
+            if (event.data) {
                 try {
                     console.log('接收到消息:', event.data);
-                    
+
                     // 保存节点信息用于保存
                     if (event.data.nodeId !== undefined) {
                         window.currentNodeInfo = {
@@ -420,14 +406,14 @@
                         };
                         console.log('已保存节点信息:', window.currentNodeInfo);
                     }
-                    
+
                     console.log('接收到表格配置:', event.data.config);
-                    
+
                     // 等待DOM加载完成后应用配置
                     if (document.readyState === 'complete') {
                         applyConfigToTable(event.data.config);
                     } else {
-                        window.addEventListener('load', function() {
+                        window.addEventListener('load', function () {
                             applyConfigToTable(event.data.config);
                         });
                     }
@@ -436,14 +422,14 @@
                 }
             }
         });
-        
+
         // 应用配置到表格
         function applyConfigToTable(config) {
             // 确保applyTableConfig函数可用
             if (window.applyTableConfig) {
                 console.log('应用配置到表格...');
                 const success = window.applyTableConfig(config);
-                
+
                 if (success) {
                     console.log('表格配置应用成功');
                     // 如果需要，可以在这里添加额外的UI更新逻辑
@@ -456,4 +442,5 @@
         }
     </script>
 </body>
+
 </html>
