@@ -11,7 +11,7 @@
 	<script>
 			// 根据环境动态加载 SDK
 			const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-			const sdkUrl = isDev ? 'http://10.238.171.159:8090/wp-core/api/getPanelXSdk' : '/wp-core/api/getPanelXSdk';
+			const sdkUrl = isDev ? 'https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk' : '/wp-core/api/getPanelXSdk';
 			const script = document.createElement('script');
 			script.src = sdkUrl;
 			document.head.appendChild(script);
@@ -40,6 +40,90 @@
 				font-size: 16px;
 				font-weight: 600;
 				color: #333;
+			}
+
+			/* 过滤输入区域样式 */
+			.filter-input-area {
+				background-color: #f8f9fa;
+				border-bottom: 2px solid #e0e0e0;
+				padding: 15px 20px;
+			}
+
+			.filter-input-header {
+				margin-bottom: 12px;
+			}
+
+			.filter-input-header h4 {
+				margin: 0;
+				font-size: 14px;
+				font-weight: 600;
+				color: #333;
+			}
+
+			.filter-inputs-container {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: 15px;
+			}
+
+			.filter-input-item {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+			}
+
+			.filter-input-item label {
+				font-size: 13px;
+				color: #555;
+				font-weight: 500;
+				min-width: 80px;
+			}
+
+			.filter-input-item input {
+				padding: 6px 12px;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				font-size: 13px;
+				min-width: 200px;
+			}
+
+			.filter-input-item input:focus {
+				outline: none;
+				border-color: #2196F3;
+			}
+
+			.filter-buttons {
+				display: flex;
+				gap: 10px;
+			}
+
+			.query-btn, .reset-btn {
+				padding: 8px 24px;
+				font-size: 14px;
+				border: none;
+				border-radius: 4px;
+				cursor: pointer;
+				transition: all 0.2s;
+			}
+
+			.query-btn {
+				background-color: #2196F3;
+				color: white;
+			}
+
+			.query-btn:hover {
+				background-color: #1976d2;
+			}
+
+			.reset-btn {
+				background-color: #f5f5f5;
+				color: #666;
+				border: 1px solid #ddd;
+			}
+
+			.reset-btn:hover {
+				background-color: #e0e0e0;
 			}
 
 			.content {
@@ -131,6 +215,17 @@
 			<span class="header-title">明细报表查询</span>
 		</div>
 
+		<!-- 过滤条件区域 -->
+		<div id="filter-input-area" class="filter-input-area" style="display: none;">
+			<div class="filter-input-header">
+				<h4>过滤条件</h4>
+			</div>
+			<div id="filter-inputs-container" class="filter-inputs-container">
+				<!-- 过滤输入框将在这里动态生成 -->
+				<!-- 按钮也将添加到这里 -->
+			</div>
+		</div>
+
 		<div class="content">
 			<div class="table-container">
 				<div id="table-content">
@@ -145,7 +240,7 @@
 			// SDK实例和配置
 			let sdk = null;
 			let sdkConfig = {
-				devDefaultBaseUrl: 'http://10.238.171.159:8090',
+				devDefaultBaseUrl: 'https://demo.kwaidoo.com/zbyth/process',
 				busDomainCode: 'OctoCM_BDYTH'
 			};
 			
@@ -252,7 +347,6 @@
 
 				try {
 					// 构建查询参数 - 需要传入报表的code
-					// TODO: 从配置中获取报表code，这里暂时使用测试code
 					const reportCode = config.reportCode || "ef563b19_14b7_427d_b523_29b9f3d79d18";
 					
 					const params = {
@@ -262,6 +356,11 @@
 							"code": reportCode
 						}
 					};
+
+					// 添加过滤条件（即使为空也要传）
+					const filterClause = buildFilterClause();
+					params.buttonParam.filter = filterClause || '';
+					console.log('添加过滤条件:', filterClause || '(空)');
 
 					console.log('调用SDK查询，参数:', params);
 					const result = await sdk.api.callButton(params);
@@ -288,25 +387,149 @@
 					console.log('收到明细表格配置:', config);
 					currentConfig = config;
 					
+					// 初始化过滤输入区域
+					initFilterInputs(config);
+					
 					// 确保SDK已初始化
 					if (!sdk) {
 						await initializeSDK();
 					}
 					
-					// 尝试从SDK获取真实数据
-					if (config.detailReportConfig && config.detailReportConfig.selectedCols && config.detailReportConfig.selectedCols.length > 0) {
-						const queryResult = await queryDataFromSDK(config);
-						if (queryResult && queryResult.left && queryResult.right) {
-							// 使用SDK返回的数据填充表格
-							displayDetailTableWithSDKData(config, queryResult);
-							return;
+					// 初始查询（不带过滤条件）
+					await performQuery();
+				}
+			});
+
+			/**
+			 * 初始化过滤输入区域
+			 */
+			function initFilterInputs(config) {
+				const filterArea = document.getElementById('filter-input-area');
+				const filterContainer = document.getElementById('filter-inputs-container');
+				
+				if (!config || !config.filterFields || config.filterFields.length === 0) {
+					// 没有过滤字段，隐藏过滤区域
+					filterArea.style.display = 'none';
+					return;
+				}
+				
+				// 显示过滤区域
+				filterArea.style.display = 'block';
+				
+				// 清空容器
+				filterContainer.innerHTML = '';
+				
+				// 为每个过滤字段创建输入框
+				config.filterFields.forEach(field => {
+					const filterItem = document.createElement('div');
+					filterItem.className = 'filter-input-item';
+					
+					// 优先使用fieldLabels中的中文名
+					let displayName = field.displayName || field.field;
+					if (currentConfig && currentConfig.detailReportConfig && currentConfig.detailReportConfig.fieldLabels) {
+						const labelFromConfig = currentConfig.detailReportConfig.fieldLabels[field.field];
+						if (labelFromConfig) {
+							displayName = labelFromConfig;
 						}
 					}
 					
-					// 如果SDK查询失败或没有配置字段，使用模拟数据
-					displayDetailTable(config);
+					const label = document.createElement('label');
+					label.textContent = displayName;
+					
+					const input = document.createElement('input');
+					input.type = 'text';
+					input.dataset.field = field.field;
+					input.dataset.table = field.table;
+					input.placeholder = `请输入${displayName}`;
+					
+					filterItem.appendChild(label);
+					filterItem.appendChild(input);
+					filterContainer.appendChild(filterItem);
+				});
+				
+				// 创建按钮容器并添加到过滤容器中
+				const buttonGroup = document.createElement('div');
+				buttonGroup.className = 'filter-buttons';
+				
+				const queryBtn = document.createElement('button');
+				queryBtn.id = 'query-btn';
+				queryBtn.className = 'query-btn';
+				queryBtn.textContent = '查询';
+				
+				const resetBtn = document.createElement('button');
+				resetBtn.id = 'reset-btn';
+				resetBtn.className = 'reset-btn';
+				resetBtn.textContent = '重置';
+				
+				buttonGroup.appendChild(queryBtn);
+				buttonGroup.appendChild(resetBtn);
+				filterContainer.appendChild(buttonGroup);
+				
+				// 绑定查询按钮事件
+				queryBtn.onclick = async function() {
+					await performQuery();
+				};
+				
+				resetBtn.onclick = function() {
+					// 清空所有输入框
+					filterContainer.querySelectorAll('input').forEach(input => {
+						input.value = '';
+					});
+					// 重新查询
+					performQuery();
+				};
+			}
+
+			/**
+			 * 执行查询（带过滤条件）
+			 */
+			async function performQuery() {
+				if (!currentConfig) {
+					console.error('没有配置信息');
+					return;
 				}
-			});
+				
+				// 尝试从SDK获取真实数据
+				if (currentConfig.detailReportConfig && currentConfig.detailReportConfig.selectedCols && currentConfig.detailReportConfig.selectedCols.length > 0) {
+					const queryResult = await queryDataFromSDK(currentConfig);
+					if (queryResult && queryResult.left && queryResult.right) {
+						// 使用SDK返回的数据填充表格
+						displayDetailTableWithSDKData(currentConfig, queryResult);
+						return;
+					}
+				}
+				
+				// 如果SDK查询失败或没有配置字段，使用模拟数据
+				displayDetailTable(currentConfig);
+			}
+
+			/**
+			 * 构建过滤条件的SQL where子句
+			 */
+			function buildFilterClause() {
+				const filterContainer = document.getElementById('filter-inputs-container');
+				if (!filterContainer) return '';
+				
+				const inputs = filterContainer.querySelectorAll('input');
+				const filterConditions = [];
+				
+				inputs.forEach(input => {
+					const value = input.value.trim();
+					if (value !== '') {
+						const field = input.dataset.field;
+						// 使用单引号包裹值，并转义单引号
+						const escapedValue = value.replace(/'/g, "''");
+						// 使用LIKE模糊查询
+						filterConditions.push(`${field} LIKE '%${escapedValue}%'`);
+					}
+				});
+				
+				if (filterConditions.length === 0) {
+					return '';
+				}
+				
+				return filterConditions.join(' AND ');
+			}
 
 			/**
 			 * 使用SDK返回的数据填充表格
@@ -321,7 +544,7 @@
 				console.log('使用SDK数据填充表格');
 				
 				// 创建虚拟表格
-				const virtualDesignTable = createVirtualDesignTable(config.tableData);
+				const virtualDesignTable = createVirtualDesignTable(config.tableData, config.cellMergeInfo);
 				if (!virtualDesignTable) {
 					container.innerHTML = '<div class="no-data">表格数据格式错误</div>';
 					return;
@@ -340,6 +563,11 @@
 				
 				// 替换表头中的{fieldName}为中文名
 				replaceHeaderWithChineseNames(cloneTable, fieldMap, sdkData.left);
+				
+				// 应用合并信息（在数据填充之前）
+				if (config.cellMergeInfo) {
+					applyCellMergeInfo(cloneTable, config.cellMergeInfo);
+				}
 				
 				// 使用SDK数据填充
 				fillTableWithSDKData(cloneTable, fieldMap, sdkData, maxFieldRow, config.detailReportConfig.selectedCols);
@@ -363,22 +591,42 @@
 				
 				// 建立字段名到中文名的映射
 				const fieldNameToLabel = {};
+				
+				// 优先使用SDK返回的label
 				leftFields.forEach(field => {
-					fieldNameToLabel[field.name] = field.label || field.name;
+					if (field.label && field.label !== field.name) {
+						fieldNameToLabel[field.name] = field.label;
+					}
 				});
+				
+				// 补充配置中的fieldLabels
+				if (currentConfig && currentConfig.detailReportConfig && currentConfig.detailReportConfig.fieldLabels) {
+					Object.keys(currentConfig.detailReportConfig.fieldLabels).forEach(fieldName => {
+						if (!fieldNameToLabel[fieldName]) {
+							fieldNameToLabel[fieldName] = currentConfig.detailReportConfig.fieldLabels[fieldName];
+						}
+					});
+				}
+				
+				console.log('字段名到中文名映射:', fieldNameToLabel);
 				
 				// 遍历所有表头行
 				const allRows = Array.from(cloneTable.rows || []);
 				allRows.forEach(row => {
 					Array.from(row.cells || []).forEach((cell, colIndex) => {
-						const mapping = fieldMap.get(colIndex);
-						if (mapping && mapping.fieldName) {
-							const cellText = cell.textContent || '';
-							// 替换 {fieldName} 格式为中文名
-							if (cellText.includes('{') && cellText.includes('}')) {
-								const chineseName = fieldNameToLabel[mapping.fieldName] || mapping.fieldName;
-								cell.textContent = chineseName;
-							}
+						// 跳过第一列（序号列），不替换
+						if (colIndex === 0) {
+							return;
+						}
+						
+						const cellText = cell.textContent || '';
+						
+						// 只替换包含{fieldName}格式的单元格
+						if (cellText.startsWith('{') && cellText.endsWith('}')) {
+							const fieldName = cellText.substring(1, cellText.length - 1);
+							const displayName = fieldNameToLabel[fieldName] || fieldName;
+							cell.textContent = displayName;
+							console.log(`替换表头: ${cellText} -> ${displayName}`);
 						}
 					});
 				});
@@ -404,7 +652,8 @@
 					fieldNameToIndex[field.name] = index;
 				});
 
-				const headerCount = (cloneTable.tHead && cloneTable.tHead.rows.length) ? cloneTable.tHead.rows.length : 0;
+				// 修复：正确计算表头行数
+				const theadRowCount = (cloneTable.tHead && cloneTable.tHead.rows.length) ? cloneTable.tHead.rows.length : 0;
 				const cloneTbody = (cloneTable.tBodies && cloneTable.tBodies[0]) || cloneTable.createTBody();
 
 				let effectiveMaxFieldRow = maxFieldRow;
@@ -412,9 +661,10 @@
 					effectiveMaxFieldRow = cloneTable.rows.length - 1;
 				}
 
+				// 修复：数据应该插入到字段行之后
 				let insertIndexInTbody = 0;
-				if (effectiveMaxFieldRow >= headerCount) {
-					insertIndexInTbody = effectiveMaxFieldRow - headerCount + 1;
+				if (effectiveMaxFieldRow >= theadRowCount) {
+					insertIndexInTbody = effectiveMaxFieldRow - theadRowCount + 1;
 					if (insertIndexInTbody < 0) insertIndexInTbody = 0;
 				}
 
@@ -488,13 +738,21 @@
 					container.innerHTML = '<div class="no-data">配置数据为空或格式错误</div>';
 					return;
 				}
+				
+				console.log('开始显示明细表格，配置信息:', {
+					tableDataRows: config.tableData.length,
+					hasCellMergeInfo: !!config.cellMergeInfo,
+					cellMergeInfo: config.cellMergeInfo
+				});
 
 				// 创建一个虚拟的design-table来重用预览逻辑
-				const virtualDesignTable = createVirtualDesignTable(config.tableData);
+				const virtualDesignTable = createVirtualDesignTable(config.tableData, config.cellMergeInfo);
 				if (!virtualDesignTable) {
 					container.innerHTML = '<div class="no-data">表格数据格式错误</div>';
 					return;
 				}
+				
+				console.log('虚拟表格创建完成，行数:', virtualDesignTable.rows.length);
 
 				// 克隆表格并应用样式
 				const cloneTable = virtualDesignTable.cloneNode(true);
@@ -507,6 +765,11 @@
 				// 收集字段映射信息
 				const { fieldMap, maxFieldRow } = collectFieldMapAndMaxRow(virtualDesignTable);
 				const usedTables = new Set(Array.from(fieldMap.values()).map(v => v.tableName));
+
+				// 应用合并信息（在数据填充之前）
+				if (config.cellMergeInfo) {
+					applyCellMergeInfo(cloneTable, config.cellMergeInfo);
+				}
 
 				// 填充数据
 				fillTableData(cloneTable, fieldMap, usedTables, maxFieldRow);
@@ -525,7 +788,7 @@
 			/**
 			 * 从配置数据创建虚拟的设计表格
 			 */
-			function createVirtualDesignTable(tableData) {
+			function createVirtualDesignTable(tableData, cellMergeInfo) {
 				if (!Array.isArray(tableData) || tableData.length === 0) {
 					return null;
 				}
@@ -538,12 +801,107 @@
 
 				// 判断数据格式
 				if (Array.isArray(tableData[0])) {
-					// 2D数组格式
+					// 首先创建列标题行（A、B、C、D...）放在tbody第一行
+					const firstRow = tableData[0];
+					const colCount = firstRow ? firstRow.length : 10; // 默认10列
+					
+					const headerRow = document.createElement('tr');
+					for (let i = 0; i < colCount; i++) {
+						const th = document.createElement('th');
+						if (i === 0) {
+							// 第一列是行号列，不显示字母
+							th.textContent = '';
+						} else {
+							// 其他列显示字母：A、B、C...
+							th.textContent = String.fromCharCode(64 + i); // 64 + 1 = 65 = 'A'
+						}
+						th.style.fontWeight = 'bold';
+						th.style.textAlign = 'center';
+						th.style.backgroundColor = '#f0f0f0';
+						th.style.border = '0.8px solid rgb(221, 221, 221)';
+						headerRow.appendChild(th);
+					}
+					// 将列标题行添加到tbody（不占用数据行号）
+					tbody.appendChild(headerRow);
+					
+					// 2D数组格式 - 需要根据cellMergeInfo来判断哪些单元格被合并占据
+					// 使用传入的cellMergeInfo参数
+					cellMergeInfo = cellMergeInfo || {};
+					
+					// 创建一个集合来记录哪些单元格应该被跳过（被合并占据的）
+					const skipCells = new Set();
+					Object.keys(cellMergeInfo).forEach(key => {
+						const info = cellMergeInfo[key];
+						if (info.hidden) {
+							skipCells.add(key);
+						}
+					});
+					
+					console.log('cellMergeInfo:', cellMergeInfo);
+					console.log('跳过的单元格:', Array.from(skipCells));
+					
+					// 第一步：收集所有单元格并按实际rowIndex组织
+					const rowMap = new Map(); // rowIndex -> 该行的所有单元格数据
+					let maxRowIndex = 0;
+					
 					tableData.forEach((row, rowIdx) => {
-						const tr = document.createElement('tr');
-						
 						row.forEach((cellInfo, cellIdx) => {
-							const cell = rowIdx === 0 ? document.createElement('th') : document.createElement('td');
+							if (cellInfo !== null && cellInfo !== undefined && cellInfo.rowIndex) {
+								const actualRowIndex = cellInfo.rowIndex;
+								maxRowIndex = Math.max(maxRowIndex, actualRowIndex);
+								
+								if (!rowMap.has(actualRowIndex)) {
+									rowMap.set(actualRowIndex, new Array(row.length).fill(null));
+								}
+								rowMap.get(actualRowIndex)[cellIdx] = cellInfo;
+							}
+						});
+					});
+					
+					console.log('按rowIndex组织后的行数据:', rowMap);
+					console.log('最大行号:', maxRowIndex);
+					
+					// 确定列数（使用第一行数据的长度）
+					const maxColCount = tableData[0] ? tableData[0].length : 10;
+					
+					// 第二步：按行号顺序创建表格行（包括空行）
+					for (let rowIndex = 1; rowIndex <= maxRowIndex; rowIndex++) {
+						const tr = document.createElement('tr');
+						let rowData = rowMap.get(rowIndex);
+						
+						// 如果这一行没有数据，创建一个空数组
+						if (!rowData) {
+							rowData = new Array(maxColCount).fill(null);
+						}
+						
+						let hasAnyCell = false;
+						
+						rowData.forEach((cellInfo, cellIdx) => {
+							// 第一列是行号列
+							if (cellIdx === 0) {
+								const cell = document.createElement('td');
+								cell.textContent = cellInfo ? String(cellInfo) : '';
+								tr.appendChild(cell);
+								return;
+							}
+							
+							// 如果单元格有数据，检查是否被合并占据
+							if (cellInfo !== null && cellInfo !== undefined && cellInfo.rowIndex && cellInfo.cellIndex) {
+								const cellKey = `R${cellInfo.rowIndex}C${cellInfo.cellIndex}`;
+								if (skipCells.has(cellKey)) {
+									// 这个单元格被合并占据，跳过不创建
+									console.log(`跳过被合并占据的单元格: ${cellKey}`, cellInfo);
+									return;
+								}
+							}
+							
+							// 对于null单元格，不创建td（可能是被合并占据的位置）
+							if (cellInfo === null || cellInfo === undefined) {
+								return;
+							}
+							
+							// 创建单元格
+							const cell = document.createElement('td');
 							
 							// 解析单元格信息
 							let cellContent = '';
@@ -574,6 +932,20 @@
 										});
 									} catch (e) {}
 								}
+								
+								// 应用合并单元格属性
+								if (cellInfo.rowspan && cellInfo.rowspan > 1) {
+									cell.rowSpan = cellInfo.rowspan;
+									// 合并单元格自动居中
+									cell.style.textAlign = 'center';
+									cell.style.verticalAlign = 'middle';
+								}
+								if (cellInfo.colspan && cellInfo.colspan > 1) {
+									cell.colSpan = cellInfo.colspan;
+									// 合并单元格自动居中
+									cell.style.textAlign = 'center';
+									cell.style.verticalAlign = 'middle';
+								}
 							} else {
 								cellContent = String(cellInfo || '');
 							}
@@ -589,14 +961,19 @@
 							}
 							
 							tr.appendChild(cell);
+							hasAnyCell = true;
 						});
 						
-						if (rowIdx === 0) {
-							thead.appendChild(tr);
-						} else {
-							tbody.appendChild(tr);
+						// 总是添加行（包括空行，它们可能被合并单元格占据）
+						// 至少要有行号列
+						if (tr.cells.length === 0) {
+							// 完全没有单元格，至少创建行号列
+							const cell = document.createElement('td');
+							cell.textContent = '';
+							tr.appendChild(cell);
 						}
-					});
+						tbody.appendChild(tr);
+					}
 				} else if (typeof tableData[0] === 'object') {
 					// 对象数组格式
 					const columns = Object.keys(tableData[0]).filter(key => key !== '__row');
@@ -699,6 +1076,25 @@
 			}
 
 			/**
+			 * 应用单元格合并信息到克隆的表格
+			 * 注意：createVirtualDesignTable已经处理了colspan/rowspan，这里只需确认
+			 */
+			function applyCellMergeInfo(cloneTable, mergeInfo) {
+				if (!mergeInfo || typeof mergeInfo !== 'object') return;
+				
+				console.log('应用单元格合并信息到查询结果表格:', mergeInfo);
+				console.log('当前表格结构:', {
+					totalRows: cloneTable.rows.length,
+					theadRows: cloneTable.tHead ? cloneTable.tHead.rows.length : 0,
+					tbodyRows: cloneTable.tBodies[0] ? cloneTable.tBodies[0].rows.length : 0
+				});
+				
+				// 由于createVirtualDesignTable已经处理了colspan和rowspan
+				// 这里只需要记录日志，不需要再次应用
+				console.log('合并信息已在虚拟表格创建时应用');
+			}
+
+			/**
 			 * 收集字段映射和最大字段行
 			 */
 			function collectFieldMapAndMaxRow(designTable) {
@@ -731,7 +1127,8 @@
 				if (!window.tableDataMap || !window.tableDataMap[tableName]) return;
 
 				const tableData = window.tableDataMap[tableName].data || [];
-				const headerCount = (cloneTable.tHead && cloneTable.tHead.rows.length) ? cloneTable.tHead.rows.length : 0;
+				// 修复：正确计算表头行数 - 表头应该是字段单元格所在行及之前的所有行
+				const headerCount = maxFieldRow >= 0 ? (maxFieldRow + 1) : 0;
 				const cloneTbody = (cloneTable.tBodies && cloneTable.tBodies[0]) || cloneTable.createTBody();
 
 				let effectiveMaxFieldRow = maxFieldRow;
@@ -739,9 +1136,11 @@
 					effectiveMaxFieldRow = cloneTable.rows.length - 1;
 				}
 
+				// 修复：数据应该插入到字段行之后，即从 maxFieldRow + 1 行开始
 				let insertIndexInTbody = 0;
-				if (effectiveMaxFieldRow >= headerCount) {
-					insertIndexInTbody = effectiveMaxFieldRow - headerCount + 1;
+				const theadRowCount = (cloneTable.tHead && cloneTable.tHead.rows.length) ? cloneTable.tHead.rows.length : 0;
+				if (effectiveMaxFieldRow >= theadRowCount) {
+					insertIndexInTbody = effectiveMaxFieldRow - theadRowCount + 1;
 					if (insertIndexInTbody < 0) insertIndexInTbody = 0;
 				}
 
@@ -802,25 +1201,36 @@
 			 */
 			function renumberCloneTableRows(cloneTable) {
 				if (!cloneTable) return;
-				let counter = 1;
+				
+				// 只处理tbody中的行，不处理thead
 				const tbodies = cloneTable.tBodies && cloneTable.tBodies.length ? Array.from(cloneTable.tBodies) : [];
+				
 				if (tbodies.length === 0) {
-					const allRows = Array.from(cloneTable.rows || []);
-					allRows.forEach(row => {
-						if (row.cells && row.cells.length > 0) {
-							row.cells[0].textContent = (counter++).toString();
-						}
-					});
+					console.warn('没有找到tbody，跳过行号重新编号');
 					return;
 				}
+				
+				let counter = 1;
 				tbodies.forEach(tb => {
 					const rows = Array.from(tb.rows || []);
-					rows.forEach(row => {
+					rows.forEach((row, rowIndex) => {
+						// 跳过第一行（列标题行），它的第一个单元格都是th
+						if (rowIndex === 0 && row.cells && row.cells.length > 0 && row.cells[0].tagName === 'TH') {
+							return;
+						}
+						
+						// 只给有第一个单元格的行编号
 						if (row.cells && row.cells.length > 0) {
-							row.cells[0].textContent = (counter++).toString();
+							const firstCell = row.cells[0];
+							// 只有td类型的才编号（跳过th）
+							if (firstCell.tagName === 'TD') {
+								firstCell.textContent = (counter++).toString();
+							}
 						}
 					});
 				});
+				
+				console.log(`已重新编号 ${counter - 1} 个数据行`);
 			}
 
 			/**

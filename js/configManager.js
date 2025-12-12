@@ -110,6 +110,7 @@ function getCurrentTableConfig() {
     const tableConfig = {
         cellConfigurations: {},
         tableData: [],
+        cellMergeInfo: {}, // 添加单元格合并信息
         metadata: {
             version: '1.0',
             created: new Date().toISOString(),
@@ -123,16 +124,47 @@ function getCurrentTableConfig() {
     const tableSelect = document.getElementById('table-select');
     const schemaSelect = document.getElementById('schema-select');
     if (datasourceSelect && tableSelect) {
-        tableConfig.detailReportConfig = {
-            selectedDataSource: datasourceSelect.value || '',
-            selectedTable: tableSelect.value || '',
-            selectedSchema: schemaSelect ? (schemaSelect.value || '') : '',
-            selectedCols: window.selectedCols || []
-        };
-        console.log('保存明细报表配置:', tableConfig.detailReportConfig);
+		// 保持selectedCols为字符串数组（原有格式，供SDK查询使用）
+		const selectedColsArray = (window.selectedCols || []).map(col => {
+			return typeof col === 'string' ? col : col.name;
+		});
+		
+		// 单独保存字段的中文label映射（用于显示）
+		const fieldLabels = {};
+		// 添加selectedCols中的字段
+		(window.selectedCols || []).forEach(col => {
+			const colName = typeof col === 'string' ? col : col.name;
+			const fieldInfo = (window.allFields || []).find(f => f.name === colName);
+			if (fieldInfo && fieldInfo.label) {
+				fieldLabels[colName] = fieldInfo.label;
+			}
+		});
+		
+		// 添加filterFields中的字段
+		if (tableConfig.filterFields && Array.isArray(tableConfig.filterFields)) {
+			tableConfig.filterFields.forEach(filterField => {
+				const fieldName = filterField.field;
+				// 如果还没有添加过这个字段的label
+				if (fieldName && !fieldLabels[fieldName]) {
+					const fieldInfo = (window.allFields || []).find(f => f.name === fieldName);
+					if (fieldInfo && fieldInfo.label) {
+						fieldLabels[fieldName] = fieldInfo.label;
+					}
+				}
+			});
+		}
+		
+		tableConfig.detailReportConfig = {
+			selectedDataSource: datasourceSelect.value || '',
+			selectedTable: tableSelect.value || '',
+			selectedSchema: schemaSelect ? (schemaSelect.value || '') : '',
+			selectedCols: selectedColsArray,  // 保持为字符串数组
+			fieldLabels: fieldLabels  // 单独保存label映射
+		};
+		console.log('保存明细报表配置:', tableConfig.detailReportConfig);
     }
     
-    // 从全局window.cellConfigurations复制单元格配置（只保存非空的配置）
+    // 保存所有单元格配置（通过引用保存）
     if (window.cellConfigurations && typeof window.cellConfigurations === 'object') {
         Object.keys(window.cellConfigurations).forEach(cellRef => {
             const config = window.cellConfigurations[cellRef];
@@ -141,6 +173,18 @@ function getCurrentTableConfig() {
                 tableConfig.cellConfigurations[cellRef] = JSON.parse(JSON.stringify(config));
             }
         });
+    }
+    
+    // 保存单元格合并信息
+    if (window.cellMergeInfo && typeof window.cellMergeInfo === 'object') {
+        tableConfig.cellMergeInfo = JSON.parse(JSON.stringify(window.cellMergeInfo));
+        console.log('保存单元格合并信息:', tableConfig.cellMergeInfo);
+    }
+    
+    // 保存过滤字段配置
+    if (window.filterManager && typeof window.filterManager.getFilterFields === 'function') {
+        tableConfig.filterFields = window.filterManager.getFilterFields();
+        console.log('保存过滤字段配置:', tableConfig.filterFields);
     }
     
     // 判断单元格是否有配置内容（非空且非默认值）
@@ -342,6 +386,25 @@ function applyTableConfig(config) {
             console.log('已保存到window.currentNodeInfo.config:', window.currentNodeInfo.config);
         }
         
+        // 恢复过滤字段配置
+        if (config.filterFields) {
+            console.log('检测到过滤字段配置,保存到window.currentNodeInfo:', config.filterFields);
+            if (!window.currentNodeInfo) {
+                window.currentNodeInfo = {};
+            }
+            if (!window.currentNodeInfo.config) {
+                window.currentNodeInfo.config = {};
+            }
+            window.currentNodeInfo.config.filterFields = config.filterFields;
+            
+            // 触发filterManager重新加载过滤字段
+            if (window.filterManager && typeof window.filterManager.loadFilterFields === 'function') {
+                setTimeout(() => {
+                    window.filterManager.loadFilterFields();
+                }, 100);
+            }
+        }
+        
         // 更新全局单元格配置对象 - 这是我们真正需要导入的内容
         if (config.cellConfigurations && typeof config.cellConfigurations === 'object') {
             // 保存旧的配置对象引用
@@ -471,6 +534,50 @@ function applyTableConfig(config) {
             console.log(`成功导入 ${importCount} 个单元格配置`);
         } else {
             console.warn('导入的配置中没有有效的单元格配置');
+        }
+        
+        // 恢复单元格合并信息
+        if (config.cellMergeInfo && typeof config.cellMergeInfo === 'object') {
+            window.cellMergeInfo = JSON.parse(JSON.stringify(config.cellMergeInfo));
+            console.log('已恢复单元格合并信息:', window.cellMergeInfo);
+            
+            // 应用合并信息到表格
+            const table = document.getElementById('design-table');
+            if (table) {
+                Object.keys(window.cellMergeInfo).forEach(ref => {
+                    const mergeInfo = window.cellMergeInfo[ref];
+                    
+                    // 处理主合并单元格
+                    if (mergeInfo.rowSpan && mergeInfo.colSpan) {
+                        const match = ref.match(/R(\d+)C(\d+)/);
+                        if (match) {
+                            const rowIndex = parseInt(match[1]);
+                            const cellIndex = parseInt(match[2]);
+                            
+                            if (table.rows[rowIndex] && table.rows[rowIndex].cells[cellIndex]) {
+                                const cell = table.rows[rowIndex].cells[cellIndex];
+                                cell.rowSpan = mergeInfo.rowSpan;
+                                cell.colSpan = mergeInfo.colSpan;
+                            }
+                        }
+                    }
+                    
+                    // 处理被隐藏的单元格
+                    if (mergeInfo.hidden && mergeInfo.mergedInto) {
+                        const match = ref.match(/R(\d+)C(\d+)/);
+                        if (match) {
+                            const rowIndex = parseInt(match[1]);
+                            const cellIndex = parseInt(match[2]);
+                            
+                            if (table.rows[rowIndex] && table.rows[rowIndex].cells[cellIndex]) {
+                                const cell = table.rows[rowIndex].cells[cellIndex];
+                                cell.style.display = 'none';
+                            }
+                        }
+                    }
+                });
+                console.log('已应用单元格合并信息到表格');
+            }
         }
         
         // 注意：不再重建表格DOM结构，但会应用配置到现有单元格

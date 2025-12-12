@@ -172,28 +172,39 @@ function formatText(formatType) {
 
 // 为格式化按钮添加事件监听器
 document.addEventListener('DOMContentLoaded', function () {
+    console.log('expenseStatement.js: DOMContentLoaded - 开始绑定格式化按钮');
+    
     // 加粗按钮
     const boldBtn = document.getElementById('bold-btn');
+    console.log('找到加粗按钮:', boldBtn);
     if (boldBtn) {
         boldBtn.addEventListener('click', function () {
+            console.log('加粗按钮被点击');
             formatText('bold');
         });
+        console.log('加粗按钮事件已绑定');
     }
 
     // 斜体按钮
     const italicBtn = document.getElementById('italic-btn');
+    console.log('找到斜体按钮:', italicBtn);
     if (italicBtn) {
         italicBtn.addEventListener('click', function () {
+            console.log('斜体按钮被点击');
             formatText('italic');
         });
+        console.log('斜体按钮事件已绑定');
     }
 
     // 下划线按钮
     const underlineBtn = document.getElementById('underline-btn');
+    console.log('找到下划线按钮:', underlineBtn);
     if (underlineBtn) {
         underlineBtn.addEventListener('click', function () {
+            console.log('下划线按钮被点击');
             formatText('underline');
         });
+        console.log('下划线按钮事件已绑定');
     }
 
     // 下拉菜单交互
@@ -289,16 +300,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // 设置下拉菜单功能
 function setupDropdownMenu(buttonId, menuId) {
+    console.log(`setupDropdownMenu 调用: buttonId=${buttonId}, menuId=${menuId}`);
     const button = document.getElementById(buttonId);
     const menu = document.getElementById(menuId);
+    
+    console.log(`找到按钮:`, button);
+    console.log(`找到菜单:`, menu);
 
-    if (!button || !menu) return;
+    if (!button || !menu) {
+        console.log(`按钮或菜单未找到，跳过设置`);
+        return;
+    }
 
     // 点击按钮切换下拉菜单
     button.addEventListener('click', function (e) {
+        console.log(`${buttonId} 按钮被点击`);
         e.stopPropagation();
         toggleDropdown(menuId);
     });
+    console.log(`${buttonId} 事件监听器已添加`);
 
     // 阻止下拉菜单内部点击事件冒泡
     menu.addEventListener('click', function (e) {
@@ -698,6 +718,154 @@ function saveCellConfiguration(cellReference) {
     console.log('保存配置:', cellReference, cellConfigurations[cellReference]);
 }
 
+// 显示自动消失的通知
+function showNotification(message, type = 'info') {
+	const notification = document.createElement('div');
+	notification.style.cssText = `
+		position: fixed;
+		top: 20px;
+		right: 20px;
+		background-color: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+		color: white;
+		padding: 16px 24px;
+		border-radius: 4px;
+		font-size: 14px;
+		z-index: 10000;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		animation: slideIn 0.3s ease-out;
+		max-width: 400px;
+		word-wrap: break-word;
+	`;
+	notification.textContent = message;
+	
+	// 添加动画样式
+	if (!document.getElementById('notification-style')) {
+		const style = document.createElement('style');
+		style.id = 'notification-style';
+		style.textContent = `
+			@keyframes slideIn {
+				from {
+					transform: translateX(400px);
+					opacity: 0;
+				}
+				to {
+					transform: translateX(0);
+					opacity: 1;
+				}
+			}
+			@keyframes slideOut {
+				from {
+					transform: translateX(0);
+					opacity: 1;
+				}
+				to {
+					transform: translateX(400px);
+					opacity: 0;
+				}
+			}
+		`;
+		document.head.appendChild(style);
+	}
+	
+	document.body.appendChild(notification);
+	
+	// 3秒后自动消失
+	setTimeout(() => {
+		notification.style.animation = 'slideOut 0.3s ease-out';
+		setTimeout(() => {
+			if (notification.parentNode) {
+				notification.parentNode.removeChild(notification);
+			}
+		}, 300);
+	}, 3000);
+}
+
+// SDK实例（用于保存配置）
+let sdkInstance = null;
+
+// 初始化SDK
+async function initSDK() {
+    try {
+        if (!sdkInstance) {
+            console.log('初始化SDK...');
+            
+            // 从配置管理器获取配置
+            const config = window.SDK_CONFIG_SETTINGS || {};
+            const apiBaseUrl = config.getApiBaseUrl?.() || 'https://demo.kwaidoo.com/zbyth/process';
+            const busDomainCode = config.busDomainCode || 'OctoCM_BDYTH';
+            const credentials = config.credentials || { username: 'admin', password: '123456' };
+            
+            console.log('使用SDK配置:', { apiBaseUrl, busDomainCode });
+            
+            // 创建SDK实例
+            sdkInstance = new PanelXSdk({
+                devDefaultBaseUrl: apiBaseUrl,
+                busDomainCode: busDomainCode
+            });
+
+            // 执行登录
+            console.log('SDK登录中...');
+            await sdkInstance.user.login({
+                userName: credentials.username,
+                password: credentials.password,
+            });
+            console.log('SDK登录成功');
+        }
+        return sdkInstance;
+    } catch (error) {
+        console.error('SDK初始化或登录失败:', error);
+        throw error;
+    }
+}
+
+// 调用后台保存接口
+async function callBackendSaveAPI(nodeInfo) {
+    try {
+        // 初始化SDK并登录
+        const sdk = await initSDK();
+
+        // 从配置中获取保存按钮配置
+        const config = window.SDK_CONFIG_SETTINGS || {};
+        const saveButtonConfig = config.saveButton || { panelCode: 'IML_00001', buttonName: '保存' };
+
+        // 构建表单数据
+        const formData = {
+            "节点名": nodeInfo.nodeName,
+            "节点类型": nodeInfo.nodeType || "指标报表",
+            "parentCode": nodeInfo.parentCode || "000"
+        };
+
+        // 如果有编号，添加编号字段
+        if (nodeInfo.nodeId) {
+            formData["编号"] = nodeInfo.nodeId;
+        }
+
+        // 添加当前表格的config JSON
+        if (nodeInfo.config) {
+            formData["json"] = typeof nodeInfo.config === 'string' ? nodeInfo.config : JSON.stringify(nodeInfo.config);
+            console.log('添加配置JSON:', formData["json"]);
+        }
+
+        console.log('调用SDK保存接口，参数:', {
+            panelCode: saveButtonConfig.panelCode,
+            buttonName: saveButtonConfig.buttonName,
+            formData: formData
+        });
+
+        // 调用SDK接口
+        const result = await sdk.api.callButton({
+            "panelCode": saveButtonConfig.panelCode,
+            "buttonName": saveButtonConfig.buttonName,
+            "formData": formData
+        });
+
+        return result;
+    } catch (error) {
+        console.error('调用后台接口失败:', error);
+        throw error;
+    }
+}
+
 // 确保只绑定一次保存按钮事件
 if (typeof saveButtonBound === 'undefined') {
     window.saveButtonBound = true;
@@ -713,34 +881,60 @@ if (typeof saveButtonBound === 'undefined') {
             saveButton.removeEventListener('click', handleSaveClick);
 
             function handleSaveClick() {
-                console.log('保存按钮被点击，仅执行配置导出操作');
+                console.log('保存按钮被点击，执行配置保存');
 
-                // 只调用导出配置功能，不再保存单元格配置
-                if (typeof handleSaveConfig === 'function') {
-                    console.log('调用导出配置功能');
-                    handleSaveConfig();
-                } else if (window.handleSaveConfig) {
-                    console.log('通过window对象调用导出配置功能');
-                    window.handleSaveConfig();
-                } else {
-                    console.warn('未找到导出配置功能');
+                try {
+                    // 确保当前选中单元格的配置已保存
+                    if (typeof saveCellConfiguration === 'function' && window.currentSelectedCell) {
+                        saveCellConfiguration();
+                    }
+
+                    // 获取当前表格配置
+                    const currentTableConfig = typeof getCurrentTableConfig === 'function' ? getCurrentTableConfig() : null;
+                    if (!currentTableConfig) {
+                        alert('错误：无法获取表格配置');
+                        return;
+                    }
+
+                    // 验证节点信息
+                    if (!window.currentNodeInfo) {
+                        alert('错误：无法获取节点信息，请重新打开配置页面');
+                        return;
+                    }
+
+                    if (!window.currentNodeInfo.nodeName) {
+                        alert('错误：节点名称不能为空');
+                        return;
+                    }
+
+                    // 创建保存用的节点数据
+                    const nodeInfoToSave = {
+                        ...window.currentNodeInfo,
+                        config: currentTableConfig
+                    };
+
+                    // 调用后端保存接口
+                    callBackendSaveAPI(nodeInfoToSave).then(result => {
+                        if (result && result.state === '200') {
+                            showNotification('保存成功！', 'success');
+                            console.log('配置保存成功');
+                        } else {
+                            showNotification('保存失败：' + (result?.message || '未知错误'), 'error');
+                            console.error('配置保存失败:', result);
+                        }
+                    }).catch(error => {
+                        showNotification('保存失败：' + error.message, 'error');
+                        console.error('配置保存失败:', error);
+                    });
+                } catch (error) {
+                    console.error('保存配置时发生错误:', error);
+                    alert('保存配置失败：' + error.message);
                 }
             }
 
             saveButton.addEventListener('click', handleSaveClick);
         } else {
             console.warn('未找到保存按钮，请检查DOM结构');
-            // 尝试在文档中查找所有按钮，看是否有包含"保存"文本的按钮
-            const allButtons = document.querySelectorAll('button');
-            allButtons.forEach(button => {
-                if (button.textContent.includes('保存')) {
-                    console.log('找到包含"保存"文本的按钮:', button);
-                    button.addEventListener('click', function () {
-                        console.log('通过文本找到的保存按钮被点击');
-                        saveCellConfiguration();
-                    });
-                }
-            });
         }
     });
 }

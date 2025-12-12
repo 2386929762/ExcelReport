@@ -124,3 +124,39 @@
         font-size: 13px;
     }
 }
+
+/* 选中单元格样式 */
+#design-table td.selected {
+    background-color: rgba(0, 123, 255, 0.15) !important;
+    border: 2px solid #007bff !important;
+    position: relative;
+    z-index: 1;
+}
+
+#design-table td.selected::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 123, 255, 0.08);
+    pointer-events: none;
+}
+
+/* 拖拉选中时禁用文本选择 */
+#design-table.no-select {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* 拖拉时的光标样式 */
+#design-table.dragging-select {
+    cursor: crosshair;
+}
+
+#design-table.dragging-select td {
+    cursor: crosshair;
+}

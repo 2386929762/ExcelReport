@@ -23,98 +23,10 @@ function initToolbarActions() {
 function bindToolbarButtons() {
     console.log('绑定工具栏按钮事件');
 
-    // 获取工具栏按钮
-    const toolbarButtons = document.querySelectorAll('.toolbar-btn');
-
-    if (toolbarButtons.length >= 2) {
-        // 第一个按钮：保存配置为JSON文件
-        const saveConfigButton = toolbarButtons[0];
-        if (saveConfigButton) {
-            // 保存原始点击事件（如果有）
-            const originalOnClick = saveConfigButton.onclick;
-
-            // 重新绑定点击事件
-            saveConfigButton.onclick = function (event) {
-                // 执行原始点击事件（如果有）
-                if (typeof originalOnClick === 'function') {
-                    originalOnClick.call(this, event);
-                }
-
-                // 执行保存配置功能
-                handleSaveConfig();
-            };
-
-            // 确保按钮有适当的提示信息
-            if (!saveConfigButton.title) {
-                saveConfigButton.title = '保存配置';
-            }
-
-            console.log('已绑定保存配置按钮');
-        }
-
-        // 第二个按钮：导入配置从JSON文件
-        const importConfigButton = toolbarButtons[1];
-        if (importConfigButton) {
-            // 绑定点击事件
-            importConfigButton.onclick = handleImportConfig;
-
-            // 设置提示信息
-            importConfigButton.title = '导入配置';
-
-            console.log('已绑定导入配置按钮');
-        }
-
-        // 第三个按钮：清空配置
-        if (toolbarButtons.length >= 3) {
-            const clearConfigButton = toolbarButtons[2];
-            if (clearConfigButton) {
-                // 绑定点击事件
-                clearConfigButton.onclick = handleClearConfig;
-
-                // 设置提示信息
-                clearConfigButton.title = '清空配置';
-
-                console.log('已绑定清空配置按钮');
-            }
-        }
-    } else {
-        console.warn('工具栏按钮不足，无法绑定所有功能');
-
-        // 尝试使用特定的类或ID查找按钮
-        const saveBtn = document.querySelector('.save-btn');
-        const downloadBtn = document.querySelector('.toolbar-btn:nth-child(2)');
-
-        if (saveBtn) {
-            saveBtn.addEventListener('click', function (event) {
-                // 确保不阻止原始的保存单元格配置功能
-                if (typeof saveCellConfiguration === 'function') {
-                    try {
-                        saveCellConfiguration();
-                    } catch (e) {
-                        console.warn('保存单元格配置失败，但继续执行配置导出:', e);
-                    }
-                }
-
-                // 执行保存配置功能
-                handleSaveConfig();
-            });
-            console.log('已使用save-btn类绑定保存配置功能');
-        }
-
-        if (downloadBtn) {
-            downloadBtn.addEventListener('click', handleImportConfig);
-            downloadBtn.title = '导入配置';
-            console.log('已绑定第二个按钮作为导入配置功能');
-        }
-
-        // 尝试查找第三个按钮作为清空配置功能
-        const clearBtn = document.querySelector('.clear-btn');
-        if (clearBtn) {
-            clearBtn.addEventListener('click', handleClearConfig);
-            clearBtn.title = '清空配置';
-            console.log('已绑定清空配置按钮');
-        }
-    }
+    // 由于保存、导入、清空按钮在HTML中被注释掉了，
+    // 这里不再绑定任何事件，避免干扰格式化按钮
+    
+    console.log('工具栏按钮绑定已禁用（因为对应按钮已被注释）');
 }
 
 /**
@@ -217,7 +129,7 @@ async function initSDK() {
             
             // 从配置管理器获取配置
             const config = window.SDK_CONFIG_SETTINGS || {};
-            const apiBaseUrl = config.getApiBaseUrl?.() || 'http://10.238.171.159:8090';
+            const apiBaseUrl = config.getApiBaseUrl?.() || 'https://demo.kwaidoo.com/zbyth/process';
             const busDomainCode = config.busDomainCode || 'OctoCM_BDYTH';
             const credentials = config.credentials || { username: 'admin', password: '123456' };
             

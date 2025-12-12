@@ -63,7 +63,16 @@
 
         <!-- 中间区域 -->
         <div class="center-panel">
-            <!-- 查询栏已移除 -->
+            <!-- 过滤区域 -->
+            <div class="filter-area">
+                <div class="filter-header">
+                    <h4>过滤条件</h4>
+                    <span class="filter-hint">拖放字段到此处作为过滤条件</span>
+                </div>
+                <div class="filter-fields-container" id="filter-fields-container">
+                    <!-- 过滤字段将通过拖放添加到这里 -->
+                </div>
+            </div>
 
             <!-- 工具条 -->
             <div class="toolbar">
@@ -81,9 +90,6 @@
 
                 <!-- 格式设置区 -->
                 <div class="toolbar-group">
-                    <div class="dropdown">
-                        <button class="toolbar-btn dropdown-toggle"><i class="fa fa-table"></i></button>
-                    </div>
                     <div class="dropdown">
                         <button id="font-color-btn" class="toolbar-btn dropdown-toggle" title="字体颜色">
                             <i class="fa fa-font"></i>
@@ -149,23 +155,13 @@
                 <!-- 分隔线 -->
                 <div class="toolbar-divider"></div>
 
-                <!-- 对齐方式区 -->
-                <div class="toolbar-group">
-                    <div class="dropdown">
-                        <button class="toolbar-btn dropdown-toggle"><i class="fa fa-list-ul"></i></button>
-                    </div>
-                    <div class="dropdown">
-                        <button class="toolbar-btn dropdown-toggle"><i class="fa fa-columns"></i></button>
-                    </div>
-                </div>
-
-                <!-- 分隔线 -->
-                <div class="toolbar-divider"></div>
-
                 <!-- 行列操作区 -->
                 <div class="toolbar-group">
                     <button class="toolbar-btn" id="add-row-btn" title="添加行"><i class="fa fa-plus"></i> 行</button>
                     <button class="toolbar-btn" id="add-col-btn" title="添加列"><i class="fa fa-plus"></i> 列</button>
+                    <button class="toolbar-btn" id="merge-cells-btn" title="合并单元格"><i class="fa fa-object-group"></i> 合并</button>
+                    <button class="toolbar-btn" id="unmerge-cells-btn" title="取消合并"><i class="fa fa-object-ungroup"></i> 取消合并</button>
+                    <button class="toolbar-btn" id="clear-cell-btn" title="清除单元格配置"><i class="fa fa-eraser"></i> 清除</button>
                 </div>
             </div>
 
@@ -294,7 +290,7 @@
         <script>
             // 根据环境动态加载 SDK
             const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-            const sdkUrl = isDev ? 'http://10.238.171.159:8090/wp-core/api/getPanelXSdk' : '/wp-core/api/getPanelXSdk';
+            const sdkUrl = isDev ? 'https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk' : '/wp-core/api/getPanelXSdk';
             const script = document.createElement('script');
             script.src = sdkUrl;
             document.head.appendChild(script);
@@ -305,7 +301,177 @@
     <script src="js/viewLauncher.js"></script>
     <script src="js/configManager.js"></script>
     <script src="js/sdkConfig.js"></script>
-    <script src="js/toolbarActions.js"></script>
+    <!-- <script src="js/toolbarActions.js"></script> -->
+    <script src="js/cellMerge.js"></script>
+    <script src="js/filterManager.js"></script>
+    
+    <!-- 单元格编辑和清除功能 -->
+    <script>
+        // 初始化单元格编辑功能
+        function initCellEditing() {
+            const designTable = document.getElementById('design-table');
+            if (!designTable) return;
+            
+            // 为所有单元格添加双击编辑事件
+            designTable.addEventListener('dblclick', function(e) {
+                const cell = e.target.closest('td');
+                if (!cell) return;
+                
+                // 如果已经在编辑模式，忽略
+                if (cell.querySelector('input')) return;
+                
+                startEditCell(cell);
+            });
+            
+            // 为所有单元格添加单击选中事件（更新顶部输入框）
+            designTable.addEventListener('click', function(e) {
+                const cell = e.target.closest('td');
+                if (!cell) return;
+                
+                // 如果正在编辑，不更新顶部输入框
+                if (cell.querySelector('input')) return;
+                
+                updateCellInput(cell);
+            });
+        }
+        
+        // 开始编辑单元格
+        function startEditCell(cell) {
+            const currentText = cell.textContent;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentText;
+            input.style.width = '100%';
+            input.style.border = 'none';
+            input.style.outline = 'none';
+            input.style.padding = '4px';
+            input.style.fontSize = 'inherit';
+            input.style.fontFamily = 'inherit';
+            
+            cell.textContent = '';
+            cell.appendChild(input);
+            input.focus();
+            input.select();
+            
+            // 完成编辑
+            function finishEdit() {
+                const newValue = input.value;
+                cell.textContent = newValue;
+                
+                // 更新配置
+                const cellId = cell.dataset.cellId;
+                if (cellId && window.cellConfigurations && window.cellConfigurations[cellId]) {
+                    // 如果单元格已有配置，只更新文本内容
+                    // 具体的配置更新逻辑可能需要根据单元格类型处理
+                }
+                
+                // 更新顶部输入框
+                updateCellInput(cell);
+            }
+            
+            // 失去焦点时完成编辑
+            input.addEventListener('blur', finishEdit);
+            
+            // 按Enter完成编辑
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    finishEdit();
+                }
+                if (e.key === 'Escape') {
+                    cell.textContent = currentText;
+                    updateCellInput(cell);
+                }
+            });
+        }
+        
+        // 更新顶部单元格输入框
+        function updateCellInput(cell) {
+            const cellInput = document.querySelector('.cell-content-input');
+            if (cellInput) {
+                cellInput.value = cell.textContent;
+                cellInput.disabled = false;
+            }
+        }
+        
+        // 清除单元格配置
+        function clearCellConfig() {
+            console.log('clearCellConfig 被调用');
+            
+            const selectedCells = document.querySelectorAll('td.selected');
+            console.log('找到选中的单元格数量:', selectedCells.length);
+            console.log('选中的单元格:', selectedCells);
+            
+            if (selectedCells.length === 0) {
+                alert('请先选择要清除的单元格');
+                return;
+            }
+            
+            // 移除confirm，因为在iframe沙盒环境中不可用
+            console.log(`准备清除 ${selectedCells.length} 个单元格的配置`);
+            
+            let clearedCount = 0;
+            selectedCells.forEach(cell => {
+                const cellId = cell.dataset.cellId;
+                console.log('清除单元格:', cellId, cell);
+                
+                // 清除配置
+                if (cellId && window.cellConfigurations) {
+                    delete window.cellConfigurations[cellId];
+                    console.log('删除了配置:', cellId);
+                }
+                
+                // 清除单元格内容
+                cell.textContent = '';
+                
+                // 清除样式（保留基本边框）
+                const border = cell.style.border;
+                cell.style.cssText = '';
+                if (border) cell.style.border = border;
+                
+                // 清除数据属性
+                delete cell.dataset.type;
+                delete cell.dataset.table;
+                delete cell.dataset.name;
+                delete cell.dataset.displayName;
+                
+                // 移除字段标识类名
+                cell.classList.remove('field-cell');
+                
+                // 取消选中
+                cell.classList.remove('selected');
+                
+                clearedCount++;
+            });
+            
+            console.log(`已清除 ${clearedCount} 个单元格的配置`);
+            // 使用alert替代confirm，或者完全不提示
+            if (clearedCount > 0) {
+                console.log(`✓ 成功清除 ${clearedCount} 个单元格`);
+            }
+        }
+        
+        // 绑定清除按钮事件
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded - 初始化单元格编辑和清除功能');
+            
+            // 初始化单元格编辑
+            initCellEditing();
+            
+            // 绑定清除按钮
+            const clearBtn = document.getElementById('clear-cell-btn');
+            console.log('清除按钮元素:', clearBtn);
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function() {
+                    console.log('清除按钮被点击');
+                    clearCellConfig();
+                });
+                console.log('清除按钮事件已绑定');
+            } else {
+                console.error('未找到清除按钮元素 #clear-cell-btn');
+            }
+        });
+    </script>
     
     <!-- 已移除从 sdk-config.json 读取配置的逻辑，直接使用默认配置 -->
     
@@ -381,7 +547,7 @@
         // SDK实例
         let sdk = null;
         let sdkConfig = {
-            devDefaultBaseUrl: 'http://10.238.171.159:8090',
+            devDefaultBaseUrl: 'https://demo.kwaidoo.com/zbyth/process',
             busDomainCode: 'OctoCM_BDYTH'
         };
         // 记录选中的字段
@@ -603,6 +769,14 @@
             }
 
             container.innerHTML = '';
+            
+            // 初始化或重置 window.allFields
+            if (!window.allFields) {
+                window.allFields = [];
+            }
+            
+            // 清空之前的字段数据，重新填充
+            window.allFields = [];
 
             fields.forEach(field => {
                 const fieldItem = document.createElement('li');
@@ -632,6 +806,12 @@
                 });
 
                 container.appendChild(fieldItem);
+                
+                // 保存字段信息到 window.allFields，供保存配置时使用
+                window.allFields.push({
+                    name: field['字段名'],
+                    label: field['字段中文名'] || field['字段名']  // 使用'字段中文名'作为label
+                });
             });
 
             if (typeof initDragAndDrop === 'function') {
@@ -640,6 +820,7 @@
             }
 
             console.log('字段列表渲染完成，共' + fields.length + '个字段');
+            console.log('window.allFields已更新:', window.allFields);
         }
 
         // 页面加载完成后初始化
@@ -658,6 +839,25 @@
                 if (configToUse && configToUse.selectedCols) {
                     window.selectedCols = configToUse.selectedCols || [];
                     console.log('已恢复选中的字段:', window.selectedCols);
+                }
+
+                // 恢复过滤字段配置到window.currentNodeInfo.config，供filterManager加载
+                if (configToUse && configToUse.filterFields) {
+                    if (!window.currentNodeInfo) {
+                        window.currentNodeInfo = {};
+                    }
+                    if (!window.currentNodeInfo.config) {
+                        window.currentNodeInfo.config = {};
+                    }
+                    window.currentNodeInfo.config.filterFields = configToUse.filterFields;
+                    console.log('已恢复过滤字段配置:', configToUse.filterFields);
+                    
+                    // 触发filterManager重新加载过滤字段
+                    if (window.filterManager && typeof window.filterManager.loadFilterFields === 'function') {
+                        setTimeout(() => {
+                            window.filterManager.loadFilterFields();
+                        }, 100);
+                    }
                 }
 
                 if (configToUse && configToUse.selectedDataSource) {
