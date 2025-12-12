@@ -425,23 +425,9 @@
         </div>
     </script>
 
-    <script>
-        // 根据环境动态加载 SDK
-        const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-        const sdkUrl = isDev ? 'https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk' : '/wp-core/api/getPanelXSdk';
-        const script = document.createElement('script');
-        script.src = sdkUrl;
-        document.head.appendChild(script);
-    </script>
+    <!-- SDK Preload - Must be first -->
+    <script src="js/preload.js" devSdkUrl="http://183.6.70.7:24689/wp-core/api/getPanelXSdk"></script>
     <script src="js/sdkConfig.js"></script>
-    <!-- <script>
-      // 根据环境动态加载 SDK
-      const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    const sdkUrl = isDev ? 'https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk' : '/wp-core/api/getPanelXSdk';
-      const script = document.createElement('script');
-      script.src = sdkUrl;
-      document.head.appendChild(script);
-    </script> -->
     <script>
         // SDK脚本无法离线访问，使用本地默认URL进行开发测试
 
@@ -470,7 +456,7 @@
                 }
 
                 // 从配置中获取保存按钮配置
-                const saveButtonConfig = window.getSaveButtonConfig?.() || { panelCode: 'IML_00001', buttonName: '保存' };
+                const saveButtonConfig = window.getSaveButtonConfig();
 
                 // 构建表单数据
                 const formData = {
