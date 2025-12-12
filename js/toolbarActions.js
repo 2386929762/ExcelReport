@@ -25,7 +25,7 @@ function bindToolbarButtons() {
 
     // 由于保存、导入、清空按钮在HTML中被注释掉了，
     // 这里不再绑定任何事件，避免干扰格式化按钮
-    
+
     console.log('工具栏按钮绑定已禁用（因为对应按钮已被注释）');
 }
 
@@ -116,55 +116,14 @@ async function handleSaveConfig() {
     }
 }
 
-// 全局SDK实例
-let sdkInstance = null;
-
-/**
- * 初始化SDK并登录
- */
-async function initSDK() {
-    try {
-        if (!sdkInstance) {
-            console.log('初始化SDK...');
-            
-            // 从配置管理器获取配置
-            const config = window.SDK_CONFIG_SETTINGS || {};
-            const apiBaseUrl = config.getApiBaseUrl?.() || 'https://demo.kwaidoo.com/zbyth/process';
-            const busDomainCode = config.busDomainCode || 'OctoCM_BDYTH';
-            const credentials = config.credentials || { username: 'admin', password: '123456' };
-            
-            console.log('使用SDK配置:', { apiBaseUrl, busDomainCode });
-            
-            // 创建SDK实例，使用配置文件中的devDefaultBaseUrl
-            sdkInstance = new PanelXSdk({
-                devDefaultBaseUrl: apiBaseUrl,
-                busDomainCode: busDomainCode
-            });
-
-            // 执行登录
-            console.log('SDK登录中...');
-            await sdkInstance.user.login({
-                userName: credentials.username,
-                password: credentials.password,
-            });
-            console.log('SDK登录成功');
-        }
-        return sdkInstance;
-    } catch (error) {
-        console.error('SDK初始化或登录失败:', error);
-        throw error;
-    }
-}
-
 // 调用后台保存接口
 async function callBackendSaveAPI(nodeInfo) {
     try {
         // 初始化SDK并登录
-        const sdk = await initSDK();
+        const sdk = await window.initializeSDK();
 
         // 从配置中获取保存按钮配置
-        const config = window.SDK_CONFIG_SETTINGS || {};
-        const saveButtonConfig = config.saveButton || { panelCode: 'IML_00001', buttonName: '保存' };
+        const saveButtonConfig = window.getSaveButtonConfig?.() || { panelCode: 'IML_00001', buttonName: '保存' };
 
         // 构建表单数据
         const formData = {
@@ -229,10 +188,10 @@ function showNotification(title, message, type = 'info') {
         white-space: pre-wrap;
     `;
     notification.textContent = title + ': ' + message;
-    
+
     // 添加到页面
     document.body.appendChild(notification);
-    
+
     // 3秒后自动删除
     setTimeout(() => {
         notification.style.transition = 'opacity 0.3s ease-out';

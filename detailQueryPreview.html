@@ -1,1444 +1,993 @@
-	<!DOCTYPE html>
-	<html lang="zh">
+<!DOCTYPE html>
+<html lang="zh">
 
-	<head>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>明细表格查询</title>
-		<link href="css/font-awesome-4.7.0.min.css" rel="stylesheet">
-		<link rel="stylesheet" href="css/style.css">
-		<!-- SDK引入 -->
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>明细表格查询</title>
+	<link href="css/font-awesome-4.7.0.min.css" rel="stylesheet">
+	<link rel="stylesheet" href="css/style.css">
+	<!-- SDK引入 -->
 	<script>
-			// 根据环境动态加载 SDK
-			const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-			const sdkUrl = isDev ? 'https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk' : '/wp-core/api/getPanelXSdk';
-			const script = document.createElement('script');
-			script.src = sdkUrl;
-			document.head.appendChild(script);
-		</script>
-		<style>
-			* { box-sizing: border-box; margin: 0; padding: 0; }
-			html, body { height: 100%; width: 100%; }
-			body {
-				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-				background-color: #f5f5f5;
-				color: #333;
-				display: flex;
-				flex-direction: column;
-			}
-			
-			.header {
-				background: #fff;
-				border-bottom: 1px solid #ddd;
-				padding: 12px 20px;
-				display: flex;
-				align-items: center;
-				justify-content: space-between;
-			}
+		// 根据环境动态加载 SDK
+		const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+		const sdkUrl = isDev ? 'https://demo.kwaidoo.com/zbyth/process/wp-core/api/getPanelXSdk' : '/wp-core/api/getPanelXSdk';
+		const script = document.createElement('script');
+		script.src = sdkUrl;
+		document.head.appendChild(script);
+	</script>
+	<script src="js/sdkConfig.js"></script>
+	<style>
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
 
-			.header-title {
-				font-size: 16px;
-				font-weight: 600;
-				color: #333;
-			}
+		html,
+		body {
+			height: 100%;
+			width: 100%;
+		}
 
-			/* 过滤输入区域样式 */
-			.filter-input-area {
-				background-color: #f8f9fa;
-				border-bottom: 2px solid #e0e0e0;
-				padding: 15px 20px;
-			}
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+			background-color: #f5f5f5;
+			color: #333;
+			display: flex;
+			flex-direction: column;
+		}
 
-			.filter-input-header {
-				margin-bottom: 12px;
-			}
+		.header {
+			background: #fff;
+			border-bottom: 1px solid #ddd;
+			padding: 12px 20px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+		}
 
-			.filter-input-header h4 {
-				margin: 0;
-				font-size: 14px;
-				font-weight: 600;
-				color: #333;
-			}
+		.header-title {
+			font-size: 16px;
+			font-weight: 600;
+			color: #333;
+		}
 
-			.filter-inputs-container {
-				display: flex;
-				flex-wrap: wrap;
-				align-items: center;
-				gap: 15px;
-			}
+		/* 过滤输入区域样式 */
+		.filter-input-area {
+			background-color: #f8f9fa;
+			border-bottom: 2px solid #e0e0e0;
+			padding: 15px 20px;
+		}
 
-			.filter-input-item {
-				display: flex;
-				align-items: center;
-				gap: 8px;
-			}
+		.filter-input-header {
+			margin-bottom: 12px;
+		}
 
-			.filter-input-item label {
-				font-size: 13px;
-				color: #555;
-				font-weight: 500;
-				min-width: 80px;
-			}
+		.filter-input-header h4 {
+			margin: 0;
+			font-size: 14px;
+			font-weight: 600;
+			color: #333;
+		}
 
-			.filter-input-item input {
-				padding: 6px 12px;
-				border: 1px solid #ddd;
-				border-radius: 4px;
-				font-size: 13px;
-				min-width: 200px;
-			}
+		.filter-inputs-container {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 15px;
+		}
 
-			.filter-input-item input:focus {
-				outline: none;
-				border-color: #2196F3;
-			}
+		.filter-input-item {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
 
-			.filter-buttons {
-				display: flex;
-				gap: 10px;
-			}
+		.filter-input-item label {
+			font-size: 13px;
+			color: #555;
+			font-weight: 500;
+			min-width: 80px;
+		}
 
-			.query-btn, .reset-btn {
-				padding: 8px 24px;
-				font-size: 14px;
-				border: none;
-				border-radius: 4px;
-				cursor: pointer;
-				transition: all 0.2s;
-			}
+		.filter-input-item input {
+			padding: 6px 12px;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+			font-size: 13px;
+			min-width: 200px;
+		}
 
-			.query-btn {
-				background-color: #2196F3;
-				color: white;
-			}
+		.filter-input-item input:focus {
+			outline: none;
+			border-color: #2196F3;
+		}
 
-			.query-btn:hover {
-				background-color: #1976d2;
-			}
+		.filter-buttons {
+			display: flex;
+			gap: 10px;
+		}
 
-			.reset-btn {
-				background-color: #f5f5f5;
-				color: #666;
-				border: 1px solid #ddd;
-			}
+		.query-btn,
+		.reset-btn {
+			padding: 8px 24px;
+			font-size: 14px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			transition: all 0.2s;
+		}
 
-			.reset-btn:hover {
-				background-color: #e0e0e0;
-			}
+		.query-btn {
+			background-color: #2196F3;
+			color: white;
+		}
 
-			.content {
-				flex: 1;
-				padding: 0;
-				overflow: hidden;
-				display: flex;
-				flex-direction: column;
-				align-items: stretch;
-			}
+		.query-btn:hover {
+			background-color: #1976d2;
+		}
 
-			.table-container {
-				flex: 1 1 auto;
-				width: 100%;
-				max-width: none;
-				background: #fff;
-				border-radius: 6px;
-				box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-				padding: 12px; /* 适度内边距 */
-				overflow: auto; /* 支持上下左右滚动 */
-				box-sizing: border-box;
-			}
+		.reset-btn {
+			background-color: #f5f5f5;
+			color: #666;
+			border: 1px solid #ddd;
+		}
 
-			/* 使用与expenseStatement.html预览相同的表格样式 */
-			.preview-cloned-table {
-				border-collapse: collapse;
-				width: auto; /* 改为auto让列宽自适应内容 */
-				table-layout: auto; /* 改为auto让列宽根据内容自动调整 */
-				max-width: none;
-				box-shadow: 0 1px 0 rgba(0,0,0,0.04);
-				background: white;
-			}
+		.reset-btn:hover {
+			background-color: #e0e0e0;
+		}
 
-			.preview-cloned-table th,
-			.preview-cloned-table td {
-				border: 1px solid #e6e6e6;
-				padding: 8px 12px;
-				min-width: 120px; /* 增加最小宽度 */
-				box-sizing: border-box;
-				white-space: nowrap;
-				overflow: visible; /* 改为visible让内容完全显示 */
-				position: relative;
-			}
+		.content {
+			flex: 1;
+			padding: 0;
+			overflow: hidden;
+			display: flex;
+			flex-direction: column;
+			align-items: stretch;
+		}
 
-			.preview-cloned-table th {
-				background-color: #f8f9fa;
-				font-weight: 600;
-				text-align: center;
-				cursor: col-resize; /* 鼠标悬停时显示调整列宽的光标 */
-				user-select: none;
-			}
+		.table-container {
+			flex: 1 1 auto;
+			width: 100%;
+			max-width: none;
+			background: #fff;
+			border-radius: 6px;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+			padding: 12px;
+			/* 适度内边距 */
+			overflow: auto;
+			/* 支持上下左右滚动 */
+			box-sizing: border-box;
+		}
 
-			.preview-cloned-table td {
-				background-color: #fff;
-				color: #333;
-			}
+		/* 使用与expenseStatement.html预览相同的表格样式 */
+		.preview-cloned-table {
+			border-collapse: collapse;
+			width: auto;
+			/* 改为auto让列宽自适应内容 */
+			table-layout: auto;
+			/* 改为auto让列宽根据内容自动调整 */
+			max-width: none;
+			box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+			background: white;
+		}
 
-			/* 列宽调整手柄 */
-			.preview-cloned-table th::after {
-				content: '';
-				position: absolute;
-				top: 0;
-				right: 0;
-				width: 5px;
-				height: 100%;
-				cursor: col-resize;
-				z-index: 1;
-			}
+		.preview-cloned-table th,
+		.preview-cloned-table td {
+			border: 1px solid #e6e6e6;
+			padding: 8px 12px;
+			min-width: 120px;
+			/* 增加最小宽度 */
+			box-sizing: border-box;
+			white-space: nowrap;
+			overflow: visible;
+			/* 改为visible让内容完全显示 */
+			position: relative;
+		}
 
-			.preview-cloned-table th:hover::after {
-				background-color: rgba(0, 123, 255, 0.1);
-			}
+		.preview-cloned-table th {
+			background-color: #f8f9fa;
+			font-weight: 600;
+			text-align: center;
+			cursor: col-resize;
+			/* 鼠标悬停时显示调整列宽的光标 */
+			user-select: none;
+		}
 
-			.text-bold { font-weight: 700; }
-			.text-italic { font-style: italic; }
-			.text-underline { text-decoration: underline; }
+		.preview-cloned-table td {
+			background-color: #fff;
+			color: #333;
+		}
 
-			.no-data {
-				text-align: center;
-				padding: 40px;
-				color: #999;
-				font-size: 14px;
-			}
-		</style>
-	</head>
+		/* 列宽调整手柄 */
+		.preview-cloned-table th::after {
+			content: '';
+			position: absolute;
+			top: 0;
+			right: 0;
+			width: 5px;
+			height: 100%;
+			cursor: col-resize;
+			z-index: 1;
+		}
 
-	<body>
-		<div class="header">
-			<span class="header-title">明细报表查询</span>
+		.preview-cloned-table th:hover::after {
+			background-color: rgba(0, 123, 255, 0.1);
+		}
+
+		.text-bold {
+			font-weight: 700;
+		}
+
+		.text-italic {
+			font-style: italic;
+		}
+
+		.text-underline {
+			text-decoration: underline;
+		}
+
+		.no-data {
+			text-align: center;
+			padding: 40px;
+			color: #999;
+			font-size: 14px;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="header">
+		<span class="header-title">明细报表查询</span>
+	</div>
+
+	<!-- 过滤条件区域 -->
+	<div id="filter-input-area" class="filter-input-area" style="display: none;">
+		<div class="filter-input-header">
+			<h4>过滤条件</h4>
 		</div>
+		<div id="filter-inputs-container" class="filter-inputs-container">
+			<!-- 过滤输入框将在这里动态生成 -->
+			<!-- 按钮也将添加到这里 -->
+		</div>
+	</div>
 
-		<!-- 过滤条件区域 -->
-		<div id="filter-input-area" class="filter-input-area" style="display: none;">
-			<div class="filter-input-header">
-				<h4>过滤条件</h4>
-			</div>
-			<div id="filter-inputs-container" class="filter-inputs-container">
-				<!-- 过滤输入框将在这里动态生成 -->
-				<!-- 按钮也将添加到这里 -->
+	<div class="content">
+		<div class="table-container">
+			<div id="table-content">
+				<div class="no-data">等待加载配置数据...</div>
 			</div>
 		</div>
+	</div>
 
-		<div class="content">
-			<div class="table-container">
-				<div id="table-content">
-					<div class="no-data">等待加载配置数据...</div>
-				</div>
-			</div>
-		</div>
+	<script>
+		console.log('明细报表查询预览页加载完成');
 
-		<script>
-			console.log('明细报表查询预览页加载完成');
+		// SDK实例和配置
+		let sdk = null;
 
-			// SDK实例和配置
-			let sdk = null;
-			let sdkConfig = {
-				devDefaultBaseUrl: 'https://demo.kwaidoo.com/zbyth/process',
-				busDomainCode: 'OctoCM_BDYTH'
-			};
-			
-			// 存储当前配置信息
-			let currentConfig = null;
+		// 存储当前配置信息
+		let currentConfig = null;
 
-			// 模拟的表数据映射（与expenseStatement.html保持一致）
-			window.tableDataMap = {
-				'客户信息表': {
-					data: [
-						{ '客户ID': 'C001', '客户姓名': '张三', '身份证号': '110101199001011234', '手机号': '13800138000' },
-						{ '客户ID': 'C002', '客户姓名': '李四', '身份证号': '110101199002021234', '手机号': '13800138001' },
-						{ '客户ID': 'C003', '客户姓名': '王五', '身份证号': '110101199003031234', '手机号': '13800138002' },
-						{ '客户ID': 'C004', '客户姓名': '赵六', '身份证号': '110101199004041234', '手机号': '13800138003' },
-						{ '客户ID': 'C005', '客户姓名': '孙七', '身份证号': '110101199005051234', '手机号': '13800138004' }
-					]
-				},
-				'账户信息表': {
-					data: [
-						{ '账户ID': 'A001', '客户ID': 'C001', '账户类型': '储蓄账户', '开户日期': '2020-01-15' },
-						{ '账户ID': 'A002', '客户ID': 'C001', '账户类型': '信用卡', '开户日期': '2020-03-20' },
-						{ '账户ID': 'A003', '客户ID': 'C002', '账户类型': '储蓄账户', '开户日期': '2019-11-10' },
-						{ '账户ID': 'A004', '客户ID': 'C003', '账户类型': '储蓄账户', '开户日期': '2021-05-22' },
-						{ '账户ID': 'A005', '客户ID': 'C004', '账户类型': '信用卡', '开户日期': '2020-08-30' }
-					]
-				},
-				'交易记录表': {
-					data: [
-						{ '交易ID': 'T001', '交易类型': '存款', '交易金额': '5000.00', '交易日期': '2024-01-10' },
-						{ '交易ID': 'T002', '交易类型': '取款', '交易金额': '2000.00', '交易日期': '2024-01-15' },
-						{ '交易ID': 'T003', '交易类型': '转账', '交易金额': '3000.00', '交易日期': '2024-01-20' },
-						{ '交易ID': 'T004', '交易类型': '存款', '交易金额': '10000.00', '交易日期': '2024-02-05' },
-						{ '交易ID': 'T005', '交易类型': '取款', '交易金额': '1500.00', '交易日期': '2024-02-10' }
-					]
-				}
-			};
-
-			// 样式复制相关常量和函数（与detailPreview.js保持一致）
-			const STYLE_PROPS = [
-				'background-color', 'background-image', 'background-size', 'background-position',
-				'color', 'font-size', 'font-weight', 'font-style', 'font-family', 'line-height',
-				'text-align', 'vertical-align', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
-				'border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width',
-				'border-top-style', 'border-right-style', 'border-bottom-style', 'border-left-style',
-				'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
-				'box-sizing', 'white-space', 'word-break', 'word-wrap', 'letter-spacing'
-			];
-
-			function copyComputedStylesToInline(sourceEl, targetEl, props = STYLE_PROPS) {
-				if (!sourceEl || !targetEl) return;
-				const cs = window.getComputedStyle(sourceEl);
-				props.forEach(prop => {
-					try {
-						const v = cs.getPropertyValue(prop);
-						if (v) {
-							const jsProp = prop.replace(/-([a-z])/g, (m, p1) => p1.toUpperCase());
-							targetEl.style[jsProp] = v;
-						}
-					} catch (e) {}
-				});
+		// 模拟的表数据映射（与expenseStatement.html保持一致）
+		window.tableDataMap = {
+			'客户信息表': {
+				data: [
+					{ '客户ID': 'C001', '客户姓名': '张三', '身份证号': '110101199001011234', '手机号': '13800138000' },
+					{ '客户ID': 'C002', '客户姓名': '李四', '身份证号': '110101199002021234', '手机号': '13800138001' },
+					{ '客户ID': 'C003', '客户姓名': '王五', '身份证号': '110101199003031234', '手机号': '13800138002' },
+					{ '客户ID': 'C004', '客户姓名': '赵六', '身份证号': '110101199004041234', '手机号': '13800138003' },
+					{ '客户ID': 'C005', '客户姓名': '孙七', '身份证号': '110101199005051234', '手机号': '13800138004' }
+				]
+			},
+			'账户信息表': {
+				data: [
+					{ '账户ID': 'A001', '客户ID': 'C001', '账户类型': '储蓄账户', '开户日期': '2020-01-15' },
+					{ '账户ID': 'A002', '客户ID': 'C001', '账户类型': '信用卡', '开户日期': '2020-03-20' },
+					{ '账户ID': 'A003', '客户ID': 'C002', '账户类型': '储蓄账户', '开户日期': '2019-11-10' },
+					{ '账户ID': 'A004', '客户ID': 'C003', '账户类型': '储蓄账户', '开户日期': '2021-05-22' },
+					{ '账户ID': 'A005', '客户ID': 'C004', '账户类型': '信用卡', '开户日期': '2020-08-30' }
+				]
+			},
+			'交易记录表': {
+				data: [
+					{ '交易ID': 'T001', '交易类型': '存款', '交易金额': '5000.00', '交易日期': '2024-01-10' },
+					{ '交易ID': 'T002', '交易类型': '取款', '交易金额': '2000.00', '交易日期': '2024-01-15' },
+					{ '交易ID': 'T003', '交易类型': '转账', '交易金额': '3000.00', '交易日期': '2024-01-20' },
+					{ '交易ID': 'T004', '交易类型': '存款', '交易金额': '10000.00', '交易日期': '2024-02-05' },
+					{ '交易ID': 'T005', '交易类型': '取款', '交易金额': '1500.00', '交易日期': '2024-02-10' }
+				]
 			}
+		};
 
-			// 初始化SDK（使用内置默认配置，不再从外部文件读取）
-			async function initializeSDK() {
+		// 样式复制相关常量和函数（与detailPreview.js保持一致）
+		const STYLE_PROPS = [
+			'background-color', 'background-image', 'background-size', 'background-position',
+			'color', 'font-size', 'font-weight', 'font-style', 'font-family', 'line-height',
+			'text-align', 'vertical-align', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+			'border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width',
+			'border-top-style', 'border-right-style', 'border-bottom-style', 'border-left-style',
+			'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
+			'box-sizing', 'white-space', 'word-break', 'word-wrap', 'letter-spacing'
+		];
+
+		function copyComputedStylesToInline(sourceEl, targetEl, props = STYLE_PROPS) {
+			if (!sourceEl || !targetEl) return;
+			const cs = window.getComputedStyle(sourceEl);
+			props.forEach(prop => {
 				try {
-					if (typeof PanelXSdk === 'undefined') {
-						console.error('PanelXSdk未定义，请确保SDK脚本已正确加载');
-						return false;
+					const v = cs.getPropertyValue(prop);
+					if (v) {
+						const jsProp = prop.replace(/-([a-z])/g, (m, p1) => p1.toUpperCase());
+						targetEl.style[jsProp] = v;
 					}
+				} catch (e) { }
+			});
+		}
 
-					sdk = new PanelXSdk({ 
-						devDefaultBaseUrl: sdkConfig.devDefaultBaseUrl, 
-						busDomainCode: sdkConfig.busDomainCode 
-					});
-
-					try {
-						await sdk.user.login({ userName: 'admin', password: '123456' });
-						console.log('SDK登录成功');
-					} catch (e) { 
-						console.error('SDK登录失败:', e); 
-					}
-
-					return true;
-				} catch (error) {
-					console.error('SDK初始化失败:', error);
-					return false;
-				}
+		// 通过SDK查询数据
+		async function queryDataFromSDK(config) {
+			if (!sdk) {
+				console.error('SDK未初始化');
+				return null;
 			}
 
-			// 通过SDK查询数据
-			async function queryDataFromSDK(config) {
+			if (!config || !config.detailReportConfig) {
+				console.error('配置信息缺失');
+				return null;
+			}
+
+			const detailConfig = config.detailReportConfig;
+			console.log('开始查询数据，配置:', detailConfig);
+
+			try {
+				// 构建查询参数 - 需要传入报表的code
+				const reportCode = config.reportCode || "ef563b19_14b7_427d_b523_29b9f3d79d18";
+
+				const params = {
+					"panelCode": "IML_00001",
+					"buttonName": "明细查询",
+					"buttonParam": {
+						"code": reportCode
+					}
+				};
+
+				// 添加过滤条件（即使为空也要传）
+				const filterClause = buildFilterClause();
+				params.buttonParam.filter = filterClause || '';
+				console.log('添加过滤条件:', filterClause || '(空)');
+
+				console.log('调用SDK查询，参数:', params);
+				const result = await sdk.api.callButton(params);
+				console.log('查询结果:', result);
+
+				if (result && result.state === '200' && result.data) {
+					return result.data;
+				} else {
+					console.error('查询失败:', result);
+					return null;
+				}
+			} catch (error) {
+				console.error('查询数据失败:', error);
+				return null;
+			}
+		}
+
+		// 监听来自父窗口的消息
+		window.addEventListener('message', async function (event) {
+			console.log('收到消息:', event.data);
+
+			if (event.data.type === 'displayDetailTableConfig') {
+				const config = event.data.config;
+				console.log('收到明细表格配置:', config);
+				currentConfig = config;
+
+				// 初始化过滤输入区域
+				initFilterInputs(config);
+
+				// 确保SDK已初始化
 				if (!sdk) {
-					console.error('SDK未初始化');
-					return null;
+					sdk = await window.initializeSDK();
 				}
 
-				if (!config || !config.detailReportConfig) {
-					console.error('配置信息缺失');
-					return null;
-				}
+				// 初始查询（不带过滤条件）
+				await performQuery();
+			}
+		});
 
-				const detailConfig = config.detailReportConfig;
-				console.log('开始查询数据，配置:', detailConfig);
+		/**
+		 * 初始化过滤输入区域
+		 */
+		function initFilterInputs(config) {
+			const filterArea = document.getElementById('filter-input-area');
+			const filterContainer = document.getElementById('filter-inputs-container');
 
-				try {
-					// 构建查询参数 - 需要传入报表的code
-					const reportCode = config.reportCode || "ef563b19_14b7_427d_b523_29b9f3d79d18";
-					
-					const params = {
-						"panelCode": "IML_00001",
-						"buttonName": "明细查询",
-						"buttonParam": {
-							"code": reportCode
-						}
-					};
+			if (!config || !config.filterFields || config.filterFields.length === 0) {
+				// 没有过滤字段，隐藏过滤区域
+				filterArea.style.display = 'none';
+				return;
+			}
 
-					// 添加过滤条件（即使为空也要传）
-					const filterClause = buildFilterClause();
-					params.buttonParam.filter = filterClause || '';
-					console.log('添加过滤条件:', filterClause || '(空)');
+			// 显示过滤区域
+			filterArea.style.display = 'block';
 
-					console.log('调用SDK查询，参数:', params);
-					const result = await sdk.api.callButton(params);
-					console.log('查询结果:', result);
+			// 清空容器
+			filterContainer.innerHTML = '';
 
-					if (result && result.state === '200' && result.data) {
-						return result.data;
-					} else {
-						console.error('查询失败:', result);
-						return null;
+			// 为每个过滤字段创建输入框
+			config.filterFields.forEach(field => {
+				const filterItem = document.createElement('div');
+				filterItem.className = 'filter-input-item';
+
+				// 优先使用fieldLabels中的中文名
+				let displayName = field.displayName || field.field;
+				if (currentConfig && currentConfig.detailReportConfig && currentConfig.detailReportConfig.fieldLabels) {
+					const labelFromConfig = currentConfig.detailReportConfig.fieldLabels[field.field];
+					if (labelFromConfig) {
+						displayName = labelFromConfig;
 					}
-				} catch (error) {
-					console.error('查询数据失败:', error);
-					return null;
+				}
+
+				const label = document.createElement('label');
+				label.textContent = displayName;
+
+				const input = document.createElement('input');
+				input.type = 'text';
+				input.dataset.field = field.field;
+				input.dataset.table = field.table;
+				input.placeholder = `请输入${displayName}`;
+
+				filterItem.appendChild(label);
+				filterItem.appendChild(input);
+				filterContainer.appendChild(filterItem);
+			});
+
+			// 创建按钮容器并添加到过滤容器中
+			const buttonGroup = document.createElement('div');
+			buttonGroup.className = 'filter-buttons';
+
+			const queryBtn = document.createElement('button');
+			queryBtn.id = 'query-btn';
+			queryBtn.className = 'query-btn';
+			queryBtn.textContent = '查询';
+
+			const resetBtn = document.createElement('button');
+			resetBtn.id = 'reset-btn';
+			resetBtn.className = 'reset-btn';
+			resetBtn.textContent = '重置';
+
+			buttonGroup.appendChild(queryBtn);
+			buttonGroup.appendChild(resetBtn);
+			filterContainer.appendChild(buttonGroup);
+
+			// 绑定查询按钮事件
+			queryBtn.onclick = async function () {
+				await performQuery();
+			};
+
+			resetBtn.onclick = function () {
+				// 清空所有输入框
+				filterContainer.querySelectorAll('input').forEach(input => {
+					input.value = '';
+				});
+				// 重新查询
+				performQuery();
+			};
+		}
+
+		/**
+		 * 执行查询（带过滤条件）
+		 */
+		async function performQuery() {
+			if (!currentConfig) {
+				console.error('没有配置信息');
+				return;
+			}
+
+			// 尝试从SDK获取真实数据
+			if (currentConfig.detailReportConfig && currentConfig.detailReportConfig.selectedCols && currentConfig.detailReportConfig.selectedCols.length > 0) {
+				const queryResult = await queryDataFromSDK(currentConfig);
+				if (queryResult && queryResult.left && queryResult.right) {
+					// 使用SDK返回的数据填充表格
+					displayDetailTableWithSDKData(currentConfig, queryResult);
+					return;
 				}
 			}
 
-			// 监听来自父窗口的消息
-			window.addEventListener('message', async function(event) {
-				console.log('收到消息:', event.data);
+			// 如果SDK查询失败或没有配置字段，使用模拟数据
+			displayDetailTable(currentConfig);
+		}
 
-				if (event.data.type === 'displayDetailTableConfig') {
-					const config = event.data.config;
-					console.log('收到明细表格配置:', config);
-					currentConfig = config;
-					
-					// 初始化过滤输入区域
-					initFilterInputs(config);
-					
-					// 确保SDK已初始化
-					if (!sdk) {
-						await initializeSDK();
-					}
-					
-					// 初始查询（不带过滤条件）
-					await performQuery();
+		/**
+		 * 构建过滤条件的SQL where子句
+		 */
+		function buildFilterClause() {
+			const filterContainer = document.getElementById('filter-inputs-container');
+			if (!filterContainer) return '';
+
+			const inputs = filterContainer.querySelectorAll('input');
+			const filterConditions = [];
+
+			inputs.forEach(input => {
+				const value = input.value.trim();
+				if (value !== '') {
+					const field = input.dataset.field;
+					// 使用单引号包裹值，并转义单引号
+					const escapedValue = value.replace(/'/g, "''");
+					// 使用LIKE模糊查询
+					filterConditions.push(`${field} LIKE '%${escapedValue}%'`);
 				}
 			});
 
-			/**
-			 * 初始化过滤输入区域
-			 */
-			function initFilterInputs(config) {
-				const filterArea = document.getElementById('filter-input-area');
-				const filterContainer = document.getElementById('filter-inputs-container');
-				
-				if (!config || !config.filterFields || config.filterFields.length === 0) {
-					// 没有过滤字段，隐藏过滤区域
-					filterArea.style.display = 'none';
-					return;
-				}
-				
-				// 显示过滤区域
-				filterArea.style.display = 'block';
-				
-				// 清空容器
-				filterContainer.innerHTML = '';
-				
-				// 为每个过滤字段创建输入框
-				config.filterFields.forEach(field => {
-					const filterItem = document.createElement('div');
-					filterItem.className = 'filter-input-item';
-					
-					// 优先使用fieldLabels中的中文名
-					let displayName = field.displayName || field.field;
-					if (currentConfig && currentConfig.detailReportConfig && currentConfig.detailReportConfig.fieldLabels) {
-						const labelFromConfig = currentConfig.detailReportConfig.fieldLabels[field.field];
-						if (labelFromConfig) {
-							displayName = labelFromConfig;
-						}
-					}
-					
-					const label = document.createElement('label');
-					label.textContent = displayName;
-					
-					const input = document.createElement('input');
-					input.type = 'text';
-					input.dataset.field = field.field;
-					input.dataset.table = field.table;
-					input.placeholder = `请输入${displayName}`;
-					
-					filterItem.appendChild(label);
-					filterItem.appendChild(input);
-					filterContainer.appendChild(filterItem);
-				});
-				
-				// 创建按钮容器并添加到过滤容器中
-				const buttonGroup = document.createElement('div');
-				buttonGroup.className = 'filter-buttons';
-				
-				const queryBtn = document.createElement('button');
-				queryBtn.id = 'query-btn';
-				queryBtn.className = 'query-btn';
-				queryBtn.textContent = '查询';
-				
-				const resetBtn = document.createElement('button');
-				resetBtn.id = 'reset-btn';
-				resetBtn.className = 'reset-btn';
-				resetBtn.textContent = '重置';
-				
-				buttonGroup.appendChild(queryBtn);
-				buttonGroup.appendChild(resetBtn);
-				filterContainer.appendChild(buttonGroup);
-				
-				// 绑定查询按钮事件
-				queryBtn.onclick = async function() {
-					await performQuery();
-				};
-				
-				resetBtn.onclick = function() {
-					// 清空所有输入框
-					filterContainer.querySelectorAll('input').forEach(input => {
-						input.value = '';
-					});
-					// 重新查询
-					performQuery();
-				};
+			if (filterConditions.length === 0) {
+				return '';
 			}
 
-			/**
-			 * 执行查询（带过滤条件）
-			 */
-			async function performQuery() {
-				if (!currentConfig) {
-					console.error('没有配置信息');
-					return;
+			return filterConditions.join(' AND ');
+		}
+
+		/**
+		 * 使用SDK返回的数据填充表格
+		 */
+		function displayDetailTableWithSDKData(config, sdkData) {
+			const container = document.getElementById('table-content');
+			if (!config || !config.tableData || !sdkData) {
+				container.innerHTML = '<div class="no-data">数据为空</div>';
+				return;
+			}
+
+			console.log('使用SDK数据填充表格');
+
+			// 创建虚拟表格
+			const virtualDesignTable = createVirtualDesignTable(config.tableData, config.cellMergeInfo);
+			if (!virtualDesignTable) {
+				container.innerHTML = '<div class="no-data">表格数据格式错误</div>';
+				return;
+			}
+
+			// 克隆表格
+			const cloneTable = virtualDesignTable.cloneNode(true);
+			cloneTable.classList.add('preview-cloned-table');
+			cloneTable.removeAttribute('id');
+
+			// 复制样式
+			copyTableComputedStyles(virtualDesignTable, cloneTable);
+
+			// 收集字段映射
+			const { fieldMap, maxFieldRow } = collectFieldMapAndMaxRow(virtualDesignTable);
+
+			// 替换表头中的{fieldName}为中文名
+			replaceHeaderWithChineseNames(cloneTable, fieldMap, sdkData.left);
+
+			// 应用合并信息（在数据填充之前）
+			if (config.cellMergeInfo) {
+				applyCellMergeInfo(cloneTable, config.cellMergeInfo);
+			}
+
+			// 使用SDK数据填充
+			fillTableWithSDKData(cloneTable, fieldMap, sdkData, maxFieldRow, config.detailReportConfig.selectedCols);
+
+			// 重新编号
+			renumberCloneTableRows(cloneTable);
+
+			// 显示
+			container.innerHTML = '';
+			container.appendChild(cloneTable);
+
+			// 添加列宽调整功能
+			addColumnResizeFeature(cloneTable);
+		}
+
+		/**
+		 * 替换表头中的{fieldName}为中文名
+		 */
+		function replaceHeaderWithChineseNames(cloneTable, fieldMap, leftFields) {
+			if (!leftFields || !Array.isArray(leftFields)) return;
+
+			// 建立字段名到中文名的映射
+			const fieldNameToLabel = {};
+
+			// 优先使用SDK返回的label
+			leftFields.forEach(field => {
+				if (field.label && field.label !== field.name) {
+					fieldNameToLabel[field.name] = field.label;
 				}
-				
-				// 尝试从SDK获取真实数据
-				if (currentConfig.detailReportConfig && currentConfig.detailReportConfig.selectedCols && currentConfig.detailReportConfig.selectedCols.length > 0) {
-					const queryResult = await queryDataFromSDK(currentConfig);
-					if (queryResult && queryResult.left && queryResult.right) {
-						// 使用SDK返回的数据填充表格
-						displayDetailTableWithSDKData(currentConfig, queryResult);
+			});
+
+			// 补充配置中的fieldLabels
+			if (currentConfig && currentConfig.detailReportConfig && currentConfig.detailReportConfig.fieldLabels) {
+				Object.keys(currentConfig.detailReportConfig.fieldLabels).forEach(fieldName => {
+					if (!fieldNameToLabel[fieldName]) {
+						fieldNameToLabel[fieldName] = currentConfig.detailReportConfig.fieldLabels[fieldName];
+					}
+				});
+			}
+
+			console.log('字段名到中文名映射:', fieldNameToLabel);
+
+			// 遍历所有表头行
+			const allRows = Array.from(cloneTable.rows || []);
+			allRows.forEach(row => {
+				Array.from(row.cells || []).forEach((cell, colIndex) => {
+					// 跳过第一列（序号列），不替换
+					if (colIndex === 0) {
 						return;
 					}
-				}
-				
-				// 如果SDK查询失败或没有配置字段，使用模拟数据
-				displayDetailTable(currentConfig);
-			}
 
-			/**
-			 * 构建过滤条件的SQL where子句
-			 */
-			function buildFilterClause() {
-				const filterContainer = document.getElementById('filter-inputs-container');
-				if (!filterContainer) return '';
-				
-				const inputs = filterContainer.querySelectorAll('input');
-				const filterConditions = [];
-				
-				inputs.forEach(input => {
-					const value = input.value.trim();
-					if (value !== '') {
-						const field = input.dataset.field;
-						// 使用单引号包裹值，并转义单引号
-						const escapedValue = value.replace(/'/g, "''");
-						// 使用LIKE模糊查询
-						filterConditions.push(`${field} LIKE '%${escapedValue}%'`);
+					const cellText = cell.textContent || '';
+
+					// 只替换包含{fieldName}格式的单元格
+					if (cellText.startsWith('{') && cellText.endsWith('}')) {
+						const fieldName = cellText.substring(1, cellText.length - 1);
+						const displayName = fieldNameToLabel[fieldName] || fieldName;
+						cell.textContent = displayName;
+						console.log(`替换表头: ${cellText} -> ${displayName}`);
 					}
 				});
-				
-				if (filterConditions.length === 0) {
-					return '';
-				}
-				
-				return filterConditions.join(' AND ');
+			});
+		}
+
+		/**
+		 * 使用SDK返回的数据填充表格
+		 */
+		function fillTableWithSDKData(cloneTable, fieldMap, sdkData, maxFieldRow, selectedCols) {
+			const { left, right } = sdkData;
+			if (!left || !right || !Array.isArray(right)) {
+				console.error('SDK数据格式错误');
+				return;
 			}
 
-			/**
-			 * 使用SDK返回的数据填充表格
-			 */
-			function displayDetailTableWithSDKData(config, sdkData) {
-				const container = document.getElementById('table-content');
-				if (!config || !config.tableData || !sdkData) {
-					container.innerHTML = '<div class="no-data">数据为空</div>';
-					return;
-				}
+			console.log('字段映射:', left);
+			console.log('数据行数:', right.length);
+			console.log('选中的字段:', selectedCols);
 
-				console.log('使用SDK数据填充表格');
-				
-				// 创建虚拟表格
-				const virtualDesignTable = createVirtualDesignTable(config.tableData, config.cellMergeInfo);
-				if (!virtualDesignTable) {
-					container.innerHTML = '<div class="no-data">表格数据格式错误</div>';
-					return;
-				}
+			// 建立字段名到列索引的映射
+			const fieldNameToIndex = {};
+			left.forEach((field, index) => {
+				fieldNameToIndex[field.name] = index;
+			});
 
-				// 克隆表格
-				const cloneTable = virtualDesignTable.cloneNode(true);
-				cloneTable.classList.add('preview-cloned-table');
-				cloneTable.removeAttribute('id');
+			// 修复：正确计算表头行数
+			const theadRowCount = (cloneTable.tHead && cloneTable.tHead.rows.length) ? cloneTable.tHead.rows.length : 0;
+			const cloneTbody = (cloneTable.tBodies && cloneTable.tBodies[0]) || cloneTable.createTBody();
 
-				// 复制样式
-				copyTableComputedStyles(virtualDesignTable, cloneTable);
-
-				// 收集字段映射
-				const { fieldMap, maxFieldRow } = collectFieldMapAndMaxRow(virtualDesignTable);
-				
-				// 替换表头中的{fieldName}为中文名
-				replaceHeaderWithChineseNames(cloneTable, fieldMap, sdkData.left);
-				
-				// 应用合并信息（在数据填充之前）
-				if (config.cellMergeInfo) {
-					applyCellMergeInfo(cloneTable, config.cellMergeInfo);
-				}
-				
-				// 使用SDK数据填充
-				fillTableWithSDKData(cloneTable, fieldMap, sdkData, maxFieldRow, config.detailReportConfig.selectedCols);
-
-				// 重新编号
-				renumberCloneTableRows(cloneTable);
-
-				// 显示
-				container.innerHTML = '';
-				container.appendChild(cloneTable);
-				
-				// 添加列宽调整功能
-				addColumnResizeFeature(cloneTable);
+			let effectiveMaxFieldRow = maxFieldRow;
+			if (effectiveMaxFieldRow < 0) {
+				effectiveMaxFieldRow = cloneTable.rows.length - 1;
 			}
 
-			/**
-			 * 替换表头中的{fieldName}为中文名
-			 */
-			function replaceHeaderWithChineseNames(cloneTable, fieldMap, leftFields) {
-				if (!leftFields || !Array.isArray(leftFields)) return;
-				
-				// 建立字段名到中文名的映射
-				const fieldNameToLabel = {};
-				
-				// 优先使用SDK返回的label
-				leftFields.forEach(field => {
-					if (field.label && field.label !== field.name) {
-						fieldNameToLabel[field.name] = field.label;
-					}
-				});
-				
-				// 补充配置中的fieldLabels
-				if (currentConfig && currentConfig.detailReportConfig && currentConfig.detailReportConfig.fieldLabels) {
-					Object.keys(currentConfig.detailReportConfig.fieldLabels).forEach(fieldName => {
-						if (!fieldNameToLabel[fieldName]) {
-							fieldNameToLabel[fieldName] = currentConfig.detailReportConfig.fieldLabels[fieldName];
-						}
-					});
-				}
-				
-				console.log('字段名到中文名映射:', fieldNameToLabel);
-				
-				// 遍历所有表头行
-				const allRows = Array.from(cloneTable.rows || []);
-				allRows.forEach(row => {
-					Array.from(row.cells || []).forEach((cell, colIndex) => {
-						// 跳过第一列（序号列），不替换
-						if (colIndex === 0) {
-							return;
-						}
-						
-						const cellText = cell.textContent || '';
-						
-						// 只替换包含{fieldName}格式的单元格
-						if (cellText.startsWith('{') && cellText.endsWith('}')) {
-							const fieldName = cellText.substring(1, cellText.length - 1);
-							const displayName = fieldNameToLabel[fieldName] || fieldName;
-							cell.textContent = displayName;
-							console.log(`替换表头: ${cellText} -> ${displayName}`);
-						}
-					});
-				});
+			// 修复：数据应该插入到字段行之后
+			let insertIndexInTbody = 0;
+			if (effectiveMaxFieldRow >= theadRowCount) {
+				insertIndexInTbody = effectiveMaxFieldRow - theadRowCount + 1;
+				if (insertIndexInTbody < 0) insertIndexInTbody = 0;
 			}
 
-			/**
-			 * 使用SDK返回的数据填充表格
-			 */
-			function fillTableWithSDKData(cloneTable, fieldMap, sdkData, maxFieldRow, selectedCols) {
-				const { left, right } = sdkData;
-				if (!left || !right || !Array.isArray(right)) {
-					console.error('SDK数据格式错误');
-					return;
-				}
+			let templateRow = null;
+			if (cloneTbody.rows.length > 0) {
+				templateRow = cloneTbody.rows[cloneTbody.rows.length - 1];
+			}
 
-				console.log('字段映射:', left);
-				console.log('数据行数:', right.length);
-				console.log('选中的字段:', selectedCols);
+			const firstRow = (cloneTable.tHead && cloneTable.tHead.rows.length > 0) ? cloneTable.tHead.rows[0] :
+				((cloneTable.rows && cloneTable.rows.length > 0) ? cloneTable.rows[0] : null);
+			const colCount = firstRow ? firstRow.cells.length : 5;
 
-				// 建立字段名到列索引的映射
-				const fieldNameToIndex = {};
-				left.forEach((field, index) => {
-					fieldNameToIndex[field.name] = index;
-				});
+			// 填充每一行数据
+			for (let i = 0; i < right.length; i++) {
+				const dataRow = right[i]; // 这是一个数组，按照left中的字段顺序
+				const targetIndex = insertIndexInTbody + i;
+				let targetRow = null;
 
-				// 修复：正确计算表头行数
-				const theadRowCount = (cloneTable.tHead && cloneTable.tHead.rows.length) ? cloneTable.tHead.rows.length : 0;
-				const cloneTbody = (cloneTable.tBodies && cloneTable.tBodies[0]) || cloneTable.createTBody();
-
-				let effectiveMaxFieldRow = maxFieldRow;
-				if (effectiveMaxFieldRow < 0) {
-					effectiveMaxFieldRow = cloneTable.rows.length - 1;
-				}
-
-				// 修复：数据应该插入到字段行之后
-				let insertIndexInTbody = 0;
-				if (effectiveMaxFieldRow >= theadRowCount) {
-					insertIndexInTbody = effectiveMaxFieldRow - theadRowCount + 1;
-					if (insertIndexInTbody < 0) insertIndexInTbody = 0;
-				}
-
-				let templateRow = null;
-				if (cloneTbody.rows.length > 0) {
-					templateRow = cloneTbody.rows[cloneTbody.rows.length - 1];
-				}
-
-				const firstRow = (cloneTable.tHead && cloneTable.tHead.rows.length > 0) ? cloneTable.tHead.rows[0] :
-								 ((cloneTable.rows && cloneTable.rows.length > 0) ? cloneTable.rows[0] : null);
-				const colCount = firstRow ? firstRow.cells.length : 5;
-
-				// 填充每一行数据
-				for (let i = 0; i < right.length; i++) {
-					const dataRow = right[i]; // 这是一个数组，按照left中的字段顺序
-					const targetIndex = insertIndexInTbody + i;
-					let targetRow = null;
-
-					if (targetIndex < cloneTbody.rows.length) {
-						targetRow = cloneTbody.rows[targetIndex];
+				if (targetIndex < cloneTbody.rows.length) {
+					targetRow = cloneTbody.rows[targetIndex];
+				} else {
+					if (templateRow) {
+						targetRow = templateRow.cloneNode(true);
+						Array.from(targetRow.cells || []).forEach(td => td.textContent = '');
 					} else {
-						if (templateRow) {
-							targetRow = templateRow.cloneNode(true);
-							Array.from(targetRow.cells || []).forEach(td => td.textContent = '');
-						} else {
-							targetRow = document.createElement('tr');
-							for (let c = 0; c < colCount; c++) {
-								const td = document.createElement('td');
-								td.textContent = '';
-								targetRow.appendChild(td);
-							}
-						}
-						
-						if (targetIndex >= cloneTbody.rows.length) {
-							cloneTbody.appendChild(targetRow);
-						} else {
-							cloneTbody.insertBefore(targetRow, cloneTbody.rows[targetIndex]);
-						}
-					}
-
-					// 填充每个单元格
-					for (let c = 0; c < colCount; c++) {
-						if (!targetRow.cells[c]) {
-							while (targetRow.cells.length <= c) {
-								const newTd = document.createElement('td');
-								targetRow.appendChild(newTd);
-							}
-						}
-						const td = targetRow.cells[c];
-						const mapping = fieldMap.get(c);
-						
-						if (mapping && mapping.fieldName) {
-							// 找到该字段在SDK返回数据中的位置
-							const dataIndex = fieldNameToIndex[mapping.fieldName];
-							if (dataIndex !== undefined && dataRow[dataIndex] !== undefined) {
-								td.textContent = dataRow[dataIndex];
-							} else {
-								td.textContent = '';
-							}
-						}
-					}
-				}
-			}
-
-			/**
-			 * 根据配置显示明细表格（使用与expenseStatement.html预览相同的逻辑）
-			 */
-			function displayDetailTable(config) {
-				const container = document.getElementById('table-content');
-				if (!config || !config.tableData) {
-					container.innerHTML = '<div class="no-data">配置数据为空或格式错误</div>';
-					return;
-				}
-				
-				console.log('开始显示明细表格，配置信息:', {
-					tableDataRows: config.tableData.length,
-					hasCellMergeInfo: !!config.cellMergeInfo,
-					cellMergeInfo: config.cellMergeInfo
-				});
-
-				// 创建一个虚拟的design-table来重用预览逻辑
-				const virtualDesignTable = createVirtualDesignTable(config.tableData, config.cellMergeInfo);
-				if (!virtualDesignTable) {
-					container.innerHTML = '<div class="no-data">表格数据格式错误</div>';
-					return;
-				}
-				
-				console.log('虚拟表格创建完成，行数:', virtualDesignTable.rows.length);
-
-				// 克隆表格并应用样式
-				const cloneTable = virtualDesignTable.cloneNode(true);
-				cloneTable.classList.add('preview-cloned-table');
-				cloneTable.removeAttribute('id');
-
-				// 复制计算样式
-				copyTableComputedStyles(virtualDesignTable, cloneTable);
-
-				// 收集字段映射信息
-				const { fieldMap, maxFieldRow } = collectFieldMapAndMaxRow(virtualDesignTable);
-				const usedTables = new Set(Array.from(fieldMap.values()).map(v => v.tableName));
-
-				// 应用合并信息（在数据填充之前）
-				if (config.cellMergeInfo) {
-					applyCellMergeInfo(cloneTable, config.cellMergeInfo);
-				}
-
-				// 填充数据
-				fillTableData(cloneTable, fieldMap, usedTables, maxFieldRow);
-
-				// 重新编号
-				renumberCloneTableRows(cloneTable);
-
-				// 显示
-				container.innerHTML = '';
-				container.appendChild(cloneTable);
-				
-				// 添加列宽调整功能
-				addColumnResizeFeature(cloneTable);
-			}
-
-			/**
-			 * 从配置数据创建虚拟的设计表格
-			 */
-			function createVirtualDesignTable(tableData, cellMergeInfo) {
-				if (!Array.isArray(tableData) || tableData.length === 0) {
-					return null;
-				}
-
-				const table = document.createElement('table');
-				table.id = 'virtual-design-table';
-				
-				const thead = document.createElement('thead');
-				const tbody = document.createElement('tbody');
-
-				// 判断数据格式
-				if (Array.isArray(tableData[0])) {
-					// 首先创建列标题行（A、B、C、D...）放在tbody第一行
-					const firstRow = tableData[0];
-					const colCount = firstRow ? firstRow.length : 10; // 默认10列
-					
-					const headerRow = document.createElement('tr');
-					for (let i = 0; i < colCount; i++) {
-						const th = document.createElement('th');
-						if (i === 0) {
-							// 第一列是行号列，不显示字母
-							th.textContent = '';
-						} else {
-							// 其他列显示字母：A、B、C...
-							th.textContent = String.fromCharCode(64 + i); // 64 + 1 = 65 = 'A'
-						}
-						th.style.fontWeight = 'bold';
-						th.style.textAlign = 'center';
-						th.style.backgroundColor = '#f0f0f0';
-						th.style.border = '0.8px solid rgb(221, 221, 221)';
-						headerRow.appendChild(th);
-					}
-					// 将列标题行添加到tbody（不占用数据行号）
-					tbody.appendChild(headerRow);
-					
-					// 2D数组格式 - 需要根据cellMergeInfo来判断哪些单元格被合并占据
-					// 使用传入的cellMergeInfo参数
-					cellMergeInfo = cellMergeInfo || {};
-					
-					// 创建一个集合来记录哪些单元格应该被跳过（被合并占据的）
-					const skipCells = new Set();
-					Object.keys(cellMergeInfo).forEach(key => {
-						const info = cellMergeInfo[key];
-						if (info.hidden) {
-							skipCells.add(key);
-						}
-					});
-					
-					console.log('cellMergeInfo:', cellMergeInfo);
-					console.log('跳过的单元格:', Array.from(skipCells));
-					
-					// 第一步：收集所有单元格并按实际rowIndex组织
-					const rowMap = new Map(); // rowIndex -> 该行的所有单元格数据
-					let maxRowIndex = 0;
-					
-					tableData.forEach((row, rowIdx) => {
-						row.forEach((cellInfo, cellIdx) => {
-							if (cellInfo !== null && cellInfo !== undefined && cellInfo.rowIndex) {
-								const actualRowIndex = cellInfo.rowIndex;
-								maxRowIndex = Math.max(maxRowIndex, actualRowIndex);
-								
-								if (!rowMap.has(actualRowIndex)) {
-									rowMap.set(actualRowIndex, new Array(row.length).fill(null));
-								}
-								rowMap.get(actualRowIndex)[cellIdx] = cellInfo;
-							}
-						});
-					});
-					
-					console.log('按rowIndex组织后的行数据:', rowMap);
-					console.log('最大行号:', maxRowIndex);
-					
-					// 确定列数（使用第一行数据的长度）
-					const maxColCount = tableData[0] ? tableData[0].length : 10;
-					
-					// 第二步：按行号顺序创建表格行（包括空行）
-					for (let rowIndex = 1; rowIndex <= maxRowIndex; rowIndex++) {
-						const tr = document.createElement('tr');
-						let rowData = rowMap.get(rowIndex);
-						
-						// 如果这一行没有数据，创建一个空数组
-						if (!rowData) {
-							rowData = new Array(maxColCount).fill(null);
-						}
-						
-						let hasAnyCell = false;
-						
-						rowData.forEach((cellInfo, cellIdx) => {
-							// 第一列是行号列
-							if (cellIdx === 0) {
-								const cell = document.createElement('td');
-								cell.textContent = cellInfo ? String(cellInfo) : '';
-								tr.appendChild(cell);
-								return;
-							}
-							
-							// 如果单元格有数据，检查是否被合并占据
-							if (cellInfo !== null && cellInfo !== undefined && cellInfo.rowIndex && cellInfo.cellIndex) {
-								const cellKey = `R${cellInfo.rowIndex}C${cellInfo.cellIndex}`;
-								if (skipCells.has(cellKey)) {
-									// 这个单元格被合并占据，跳过不创建
-									console.log(`跳过被合并占据的单元格: ${cellKey}`, cellInfo);
-									return;
-								}
-							}
-							
-							// 对于null单元格，不创建td（可能是被合并占据的位置）
-							if (cellInfo === null || cellInfo === undefined) {
-								return;
-							}
-							
-							// 创建单元格
-							const cell = document.createElement('td');
-							
-							// 解析单元格信息
-							let cellContent = '';
-							let cellType = 'text';
-							let tableName = '';
-							let fieldName = '';
-							let displayName = '';
-							
-							if (typeof cellInfo === 'object' && cellInfo !== null) {
-								cellContent = cellInfo.value || cellInfo.content || '';
-								cellType = cellInfo.type || 'text';
-								
-								if (cellInfo.data) {
-									try {
-										const dataObj = typeof cellInfo.data === 'string' ? JSON.parse(cellInfo.data) : cellInfo.data;
-										tableName = dataObj.table || dataObj.tableName || '';
-										fieldName = dataObj.field || dataObj.fieldName || dataObj.name || '';
-										displayName = dataObj.displayName || fieldName;
-									} catch (e) {}
-								}
-								
-								// 应用样式
-								if (cellInfo.style) {
-									try {
-										const styleObj = typeof cellInfo.style === 'string' ? JSON.parse(cellInfo.style) : cellInfo.style;
-										Object.keys(styleObj).forEach(key => {
-											cell.style[key] = styleObj[key];
-										});
-									} catch (e) {}
-								}
-								
-								// 应用合并单元格属性
-								if (cellInfo.rowspan && cellInfo.rowspan > 1) {
-									cell.rowSpan = cellInfo.rowspan;
-									// 合并单元格自动居中
-									cell.style.textAlign = 'center';
-									cell.style.verticalAlign = 'middle';
-								}
-								if (cellInfo.colspan && cellInfo.colspan > 1) {
-									cell.colSpan = cellInfo.colspan;
-									// 合并单元格自动居中
-									cell.style.textAlign = 'center';
-									cell.style.verticalAlign = 'middle';
-								}
-							} else {
-								cellContent = String(cellInfo || '');
-							}
-							
-							cell.textContent = cellContent;
-							
-							// 设置data属性
-							if (cellType === 'field') {
-								cell.dataset.type = 'field';
-								if (tableName) cell.dataset.table = tableName;
-								if (fieldName) cell.dataset.name = fieldName;
-								if (displayName) cell.dataset.displayName = displayName;
-							}
-							
-							tr.appendChild(cell);
-							hasAnyCell = true;
-						});
-						
-						// 总是添加行（包括空行，它们可能被合并单元格占据）
-						// 至少要有行号列
-						if (tr.cells.length === 0) {
-							// 完全没有单元格，至少创建行号列
-							const cell = document.createElement('td');
-							cell.textContent = '';
-							tr.appendChild(cell);
-						}
-						tbody.appendChild(tr);
-					}
-				} else if (typeof tableData[0] === 'object') {
-					// 对象数组格式
-					const columns = Object.keys(tableData[0]).filter(key => key !== '__row');
-					
-					// 创建表头
-					const headerRow = document.createElement('tr');
-					columns.forEach(col => {
-						const th = document.createElement('th');
-						const cellData = tableData[0][col];
-						if (cellData && typeof cellData === 'object') {
-							th.textContent = cellData.content || col;
-							if (cellData.style) {
-								try {
-									const style = typeof cellData.style === 'string' ? JSON.parse(cellData.style) : cellData.style;
-									Object.keys(style).forEach(key => {
-										th.style[key] = style[key];
-									});
-								} catch (e) {}
-							}
-						} else {
-							th.textContent = col;
-						}
-						headerRow.appendChild(th);
-					});
-					thead.appendChild(headerRow);
-					
-					// 创建数据行
-					tableData.slice(1).forEach(row => {
-						const tr = document.createElement('tr');
-						columns.forEach(col => {
+						targetRow = document.createElement('tr');
+						for (let c = 0; c < colCount; c++) {
 							const td = document.createElement('td');
-							const cellData = row[col];
-							
-							if (cellData && typeof cellData === 'object') {
-								td.textContent = cellData.content || '';
-								const cellType = cellData.type || 'text';
-								
-								if (cellType === 'field' && cellData.data) {
-									try {
-										const dataObj = typeof cellData.data === 'string' ? JSON.parse(cellData.data) : cellData.data;
-										td.dataset.type = 'field';
-										if (dataObj.table) td.dataset.table = dataObj.table;
-										if (dataObj.field) td.dataset.name = dataObj.field;
-										if (dataObj.displayName) td.dataset.displayName = dataObj.displayName;
-									} catch (e) {}
-								}
-								
-								if (cellData.style) {
-									try {
-										const style = typeof cellData.style === 'string' ? JSON.parse(cellData.style) : cellData.style;
-										Object.keys(style).forEach(key => {
-											td.style[key] = style[key];
-										});
-									} catch (e) {}
-								}
-							} else {
-								td.textContent = cellData || '';
-							}
-							
-							tr.appendChild(td);
-						});
-						tbody.appendChild(tr);
-					});
-				}
-				
-				table.appendChild(thead);
-				table.appendChild(tbody);
-				return table;
-			}
-
-			/**
-			 * 复制表格计算样式
-			 */
-			function copyTableComputedStyles(designTable, cloneTable) {
-				if (!designTable || !cloneTable) return;
-
-				const tableProps = ['width', 'max-width', 'font-family', 'font-size', 'border-collapse', 'box-sizing'];
-				const tableCs = window.getComputedStyle(designTable);
-				tableProps.forEach(p => {
-					try {
-						const v = tableCs.getPropertyValue(p);
-						if (v) {
-							const jsProp = p.replace(/-([a-z])/g, (m, p1) => p1.toUpperCase());
-							cloneTable.style[jsProp] = v;
-						}
-					} catch (e) {}
-				});
-
-				const srcRows = Array.from(designTable.rows || []);
-				const tgtRows = Array.from(cloneTable.rows || []);
-				const rowCount = Math.min(srcRows.length, tgtRows.length);
-				for (let r = 0; r < rowCount; r++) {
-					const srcCells = Array.from(srcRows[r].cells || []);
-					const tgtCells = Array.from(tgtRows[r].cells || []);
-					const cellCount = Math.min(srcCells.length, tgtCells.length);
-					for (let c = 0; c < cellCount; c++) {
-						copyComputedStylesToInline(srcCells[c], tgtCells[c]);
-					}
-				}
-			}
-
-			/**
-			 * 应用单元格合并信息到克隆的表格
-			 * 注意：createVirtualDesignTable已经处理了colspan/rowspan，这里只需确认
-			 */
-			function applyCellMergeInfo(cloneTable, mergeInfo) {
-				if (!mergeInfo || typeof mergeInfo !== 'object') return;
-				
-				console.log('应用单元格合并信息到查询结果表格:', mergeInfo);
-				console.log('当前表格结构:', {
-					totalRows: cloneTable.rows.length,
-					theadRows: cloneTable.tHead ? cloneTable.tHead.rows.length : 0,
-					tbodyRows: cloneTable.tBodies[0] ? cloneTable.tBodies[0].rows.length : 0
-				});
-				
-				// 由于createVirtualDesignTable已经处理了colspan和rowspan
-				// 这里只需要记录日志，不需要再次应用
-				console.log('合并信息已在虚拟表格创建时应用');
-			}
-
-			/**
-			 * 收集字段映射和最大字段行
-			 */
-			function collectFieldMapAndMaxRow(designTable) {
-				const fieldMap = new Map();
-				let maxFieldRow = -1;
-				for (let r = 0; r < designTable.rows.length; r++) {
-					const row = designTable.rows[r];
-					for (let c = 0; c < row.cells.length; c++) {
-						const cell = row.cells[c];
-						if (cell && cell.dataset && cell.dataset.type === 'field' && cell.dataset.table && cell.dataset.name) {
-							fieldMap.set(c, {
-								tableName: cell.dataset.table,
-								fieldName: cell.dataset.name,
-								rowIndex: r
-							});
-							if (r > maxFieldRow) maxFieldRow = r;
+							td.textContent = '';
+							targetRow.appendChild(td);
 						}
 					}
-				}
-				return { fieldMap, maxFieldRow };
-			}
 
-			/**
-			 * 填充表格数据
-			 */
-			function fillTableData(cloneTable, fieldMap, usedTables, maxFieldRow) {
-				if (usedTables.size !== 1) return;
-
-				const tableName = Array.from(usedTables)[0];
-				if (!window.tableDataMap || !window.tableDataMap[tableName]) return;
-
-				const tableData = window.tableDataMap[tableName].data || [];
-				// 修复：正确计算表头行数 - 表头应该是字段单元格所在行及之前的所有行
-				const headerCount = maxFieldRow >= 0 ? (maxFieldRow + 1) : 0;
-				const cloneTbody = (cloneTable.tBodies && cloneTable.tBodies[0]) || cloneTable.createTBody();
-
-				let effectiveMaxFieldRow = maxFieldRow;
-				if (effectiveMaxFieldRow < 0) {
-					effectiveMaxFieldRow = cloneTable.rows.length - 1;
-				}
-
-				// 修复：数据应该插入到字段行之后，即从 maxFieldRow + 1 行开始
-				let insertIndexInTbody = 0;
-				const theadRowCount = (cloneTable.tHead && cloneTable.tHead.rows.length) ? cloneTable.tHead.rows.length : 0;
-				if (effectiveMaxFieldRow >= theadRowCount) {
-					insertIndexInTbody = effectiveMaxFieldRow - theadRowCount + 1;
-					if (insertIndexInTbody < 0) insertIndexInTbody = 0;
-				}
-
-				let templateRow = null;
-				if (cloneTbody.rows.length > 0) {
-					templateRow = cloneTbody.rows[cloneTbody.rows.length - 1];
-				}
-
-				const firstRow = (cloneTable.tHead && cloneTable.tHead.rows.length > 0) ? cloneTable.tHead.rows[0] :
-								 ((cloneTable.rows && cloneTable.rows.length > 0) ? cloneTable.rows[0] : null);
-				const colCount = firstRow ? firstRow.cells.length : 5;
-
-				for (let i = 0; i < tableData.length; i++) {
-					const dataItem = tableData[i];
-					const targetIndex = insertIndexInTbody + i;
-					let targetRow = null;
-
-					if (targetIndex < cloneTbody.rows.length) {
-						targetRow = cloneTbody.rows[targetIndex];
+					if (targetIndex >= cloneTbody.rows.length) {
+						cloneTbody.appendChild(targetRow);
 					} else {
-						if (templateRow) {
-							targetRow = templateRow.cloneNode(true);
-							Array.from(targetRow.cells || []).forEach(td => td.textContent = '');
-						} else {
-							targetRow = document.createElement('tr');
-							for (let c = 0; c < colCount; c++) {
-								const td = document.createElement('td');
-								td.textContent = '';
-								targetRow.appendChild(td);
-							}
-						}
-						
-						if (targetIndex >= cloneTbody.rows.length) {
-							cloneTbody.appendChild(targetRow);
-						} else {
-							cloneTbody.insertBefore(targetRow, cloneTbody.rows[targetIndex]);
+						cloneTbody.insertBefore(targetRow, cloneTbody.rows[targetIndex]);
+					}
+				}
+
+				// 填充每个单元格
+				for (let c = 0; c < colCount; c++) {
+					if (!targetRow.cells[c]) {
+						while (targetRow.cells.length <= c) {
+							const newTd = document.createElement('td');
+							targetRow.appendChild(newTd);
 						}
 					}
+					const td = targetRow.cells[c];
+					const mapping = fieldMap.get(c);
 
-					for (let c = 0; c < colCount; c++) {
-						if (!targetRow.cells[c]) {
-							while (targetRow.cells.length <= c) {
-								const newTd = document.createElement('td');
-								targetRow.appendChild(newTd);
-							}
-						}
-						const td = targetRow.cells[c];
-						const mapping = fieldMap.get(c);
-						if (mapping) {
-							td.textContent = dataItem[mapping.fieldName] !== undefined ? dataItem[mapping.fieldName] : '';
+					if (mapping && mapping.fieldName) {
+						// 找到该字段在SDK返回数据中的位置
+						const dataIndex = fieldNameToIndex[mapping.fieldName];
+						if (dataIndex !== undefined && dataRow[dataIndex] !== undefined) {
+							td.textContent = dataRow[dataIndex];
+						} else {
+							td.textContent = '';
 						}
 					}
 				}
 			}
+		}
 
-			/**
-			 * 重新编号所有tbody行
-			 */
-			function renumberCloneTableRows(cloneTable) {
-				if (!cloneTable) return;
-				
-				// 只处理tbody中的行，不处理thead
-				const tbodies = cloneTable.tBodies && cloneTable.tBodies.length ? Array.from(cloneTable.tBodies) : [];
-				
-				if (tbodies.length === 0) {
-					console.error('没有找到tbody，跳过行号重新编号');
-					return;
+		/**
+		 * 根据配置显示明细表格（使用与expenseStatement.html预览相同的逻辑）
+		 */
+		function displayDetailTable(config) {
+			const container = document.getElementById('table-content');
+			if (!config || !config.tableData) {
+				container.innerHTML = '<div class="no-data">配置数据为空或格式错误</div>';
+				return;
+			}
+
+			console.log('开始显示明细表格，配置信息:', {
+				tableDataRows: config.tableData.length,
+				hasCellMergeInfo: !!config.cellMergeInfo,
+				cellMergeInfo: config.cellMergeInfo
+			});
+
+			// 创建一个虚拟的design-table来重用预览逻辑
+			const virtualDesignTable = createVirtualDesignTable(config.tableData, config.cellMergeInfo);
+			if (!virtualDesignTable) {
+				container.innerHTML = '<div class="no-data">表格数据格式错误</div>';
+				return;
+			}
+
+			console.log('虚拟表格创建完成，行数:', virtualDesignTable.rows.length);
+
+			// 克隆表格并应用样式
+			const cloneTable = virtualDesignTable.cloneNode(true);
+			cloneTable.classList.add('preview-cloned-table');
+			cloneTable.removeAttribute('id');
+
+			// 复制计算样式
+			copyTableComputedStyles(virtualDesignTable, cloneTable);
+
+			// 收集字段映射信息
+			const { fieldMap, maxFieldRow } = collectFieldMapAndMaxRow(virtualDesignTable);
+			const usedTables = new Set(Array.from(fieldMap.values()).map(v => v.tableName));
+
+			// 应用合并信息（在数据填充之前）
+			if (config.cellMergeInfo) {
+				applyCellMergeInfo(cloneTable, config.cellMergeInfo);
+			}
+
+			// 填充数据
+			fillTableData(cloneTable, fieldMap, usedTables, maxFieldRow);
+
+			// 重新编号
+			renumberCloneTableRows(cloneTable);
+
+			// 显示
+			container.innerHTML = '';
+			container.appendChild(cloneTable);
+
+			// 添加列宽调整功能
+			addColumnResizeFeature(cloneTable);
+		}
+
+		/**
+		 * 从配置数据创建虚拟的设计表格
+		 */
+		function createVirtualDesignTable(tableData, cellMergeInfo) {
+			if (!Array.isArray(tableData) || tableData.length === 0) {
+				return null;
+			}
+
+			const table = document.createElement('table');
+			table.id = 'virtual-design-table';
+
+			const thead = document.createElement('thead');
+			const tbody = document.createElement('tbody');
+
+			// 判断数据格式
+			if (Array.isArray(tableData[0])) {
+				// 首先创建列标题行（A、B、C、D...）放在tbody第一行
+				const firstRow = tableData[0];
+				const colCount = firstRow ? firstRow.length : 10; // 默认10列
+
+				const headerRow = document.createElement('tr');
+				for (let i = 0; i < colCount; i++) {
+					const th = document.createElement('th');
+					if (i === 0) {
+						// 第一列是行号列，不显示字母
+						th.textContent = '';
+					} else {
+						// 其他列显示字母：A、B、C...
+						th.textContent = String.fromCharCode(64 + i); // 64 + 1 = 65 = 'A'
+					}
+					th.style.fontWeight = 'bold';
+					th.style.textAlign = 'center';
+					th.style.backgroundColor = '#f0f0f0';
+					th.style.border = '0.8px solid rgb(221, 221, 221)';
+					headerRow.appendChild(th);
 				}
-				
-				let counter = 1;
-				tbodies.forEach(tb => {
-					const rows = Array.from(tb.rows || []);
-					rows.forEach((row, rowIndex) => {
-						// 跳过第一行（列标题行），它的第一个单元格都是th
-						if (rowIndex === 0 && row.cells && row.cells.length > 0 && row.cells[0].tagName === 'TH') {
+				// 将列标题行添加到tbody（不占用数据行号）
+				tbody.appendChild(headerRow);
+
+				// 2D数组格式 - 需要根据cellMergeInfo来判断哪些单元格被合并占据
+				// 使用传入的cellMergeInfo参数
+				cellMergeInfo = cellMergeInfo || {};
+
+				// 创建一个集合来记录哪些单元格应该被跳过（被合并占据的）
+				const skipCells = new Set();
+				Object.keys(cellMergeInfo).forEach(key => {
+					const info = cellMergeInfo[key];
+					if (info.hidden) {
+						skipCells.add(key);
+					}
+				});
+
+				console.log('cellMergeInfo:', cellMergeInfo);
+				console.log('跳过的单元格:', Array.from(skipCells));
+
+				// 第一步：收集所有单元格并按实际rowIndex组织
+				const rowMap = new Map(); // rowIndex -> 该行的所有单元格数据
+				let maxRowIndex = 0;
+
+				tableData.forEach((row, rowIdx) => {
+					row.forEach((cellInfo, cellIdx) => {
+						if (cellInfo !== null && cellInfo !== undefined && cellInfo.rowIndex) {
+							const actualRowIndex = cellInfo.rowIndex;
+							maxRowIndex = Math.max(maxRowIndex, actualRowIndex);
+
+							if (!rowMap.has(actualRowIndex)) {
+								rowMap.set(actualRowIndex, new Array(row.length).fill(null));
+							}
+							rowMap.get(actualRowIndex)[cellIdx] = cellInfo;
+						}
+					});
+				});
+
+				console.log('按rowIndex组织后的行数据:', rowMap);
+				console.log('最大行号:', maxRowIndex);
+
+				// 确定列数（使用第一行数据的长度）
+				const maxColCount = tableData[0] ? tableData[0].length : 10;
+
+				// 第二步：按行号顺序创建表格行（包括空行）
+				for (let rowIndex = 1; rowIndex <= maxRowIndex; rowIndex++) {
+					const tr = document.createElement('tr');
+					let rowData = rowMap.get(rowIndex);
+
+					// 如果这一行没有数据，创建一个空数组
+					if (!rowData) {
+						rowData = new Array(maxColCount).fill(null);
+					}
+
+					let hasAnyCell = false;
+
+					rowData.forEach((cellInfo, cellIdx) => {
+						// 第一列是行号列
+						if (cellIdx === 0) {
+							const cell = document.createElement('td');
+							cell.textContent = cellInfo ? String(cellInfo) : '';
+							tr.appendChild(cell);
 							return;
 						}
-						
-						// 只给有第一个单元格的行编号
-						if (row.cells && row.cells.length > 0) {
-							const firstCell = row.cells[0];
-							// 只有td类型的才编号（跳过th）
-							if (firstCell.tagName === 'TD') {
-								firstCell.textContent = (counter++).toString();
+
+						// 如果单元格有数据，检查是否被合并占据
+						if (cellInfo !== null && cellInfo !== undefined && cellInfo.rowIndex && cellInfo.cellIndex) {
+							const cellKey = `R${cellInfo.rowIndex}C${cellInfo.cellIndex}`;
+							if (skipCells.has(cellKey)) {
+								// 这个单元格被合并占据，跳过不创建
+								console.log(`跳过被合并占据的单元格: ${cellKey}`, cellInfo);
+								return;
 							}
 						}
-					});
-				});
-				
-				console.log(`已重新编号 ${counter - 1} 个数据行`);
-			}
 
-			/**
-			 * 显示数组格式的表格 (2D数组) - 已废弃，使用新的统一逻辑
-			 */
-			function displayArrayFormatTable_deprecated(rows) {
-				const container = document.getElementById('table-content');
-				const table = document.createElement('table');
-				table.className = 'preview-table';
+						// 对于null单元格，不创建td（可能是被合并占据的位置）
+						if (cellInfo === null || cellInfo === undefined) {
+							return;
+						}
 
-				const thead = document.createElement('thead');
-				const tbody = document.createElement('tbody');
+						// 创建单元格
+						const cell = document.createElement('td');
 
-				// 收集所有用到的表名
-				const usedTables = new Set();
-				
-				// 处理每一行
-				rows.forEach((row, rowIdx) => {
-					if (!Array.isArray(row)) return;
-
-					const tr = document.createElement('tr');
-
-					row.forEach((cellInfo, cellIdx) => {
+						// 解析单元格信息
 						let cellContent = '';
-						let cellStyle = {};
 						let cellType = 'text';
 						let tableName = '';
 						let fieldName = '';
+						let displayName = '';
 
-						// 解析单元格信息
 						if (typeof cellInfo === 'object' && cellInfo !== null) {
 							cellContent = cellInfo.value || cellInfo.content || '';
 							cellType = cellInfo.type || 'text';
-							
-							// 从data字段中提取表名和字段名
+
 							if (cellInfo.data) {
 								try {
 									const dataObj = typeof cellInfo.data === 'string' ? JSON.parse(cellInfo.data) : cellInfo.data;
 									tableName = dataObj.table || dataObj.tableName || '';
 									fieldName = dataObj.field || dataObj.fieldName || dataObj.name || '';
-									
-									if (tableName) {
-										usedTables.add(tableName);
-									}
-								} catch (e) {
-									console.error('解析单元格data失败:', e);
-								}
+									displayName = dataObj.displayName || fieldName;
+								} catch (e) { }
 							}
 
-							// 解析样式
+							// 应用样式
 							if (cellInfo.style) {
 								try {
-									cellStyle = typeof cellInfo.style === 'string' ? JSON.parse(cellInfo.style) : cellInfo.style;
-								} catch (e) {
-									console.error('解析单元格样式失败:', e);
-								}
+									const styleObj = typeof cellInfo.style === 'string' ? JSON.parse(cellInfo.style) : cellInfo.style;
+									Object.keys(styleObj).forEach(key => {
+										cell.style[key] = styleObj[key];
+									});
+								} catch (e) { }
+							}
+
+							// 应用合并单元格属性
+							if (cellInfo.rowspan && cellInfo.rowspan > 1) {
+								cell.rowSpan = cellInfo.rowspan;
+								// 合并单元格自动居中
+								cell.style.textAlign = 'center';
+								cell.style.verticalAlign = 'middle';
+							}
+							if (cellInfo.colspan && cellInfo.colspan > 1) {
+								cell.colSpan = cellInfo.colspan;
+								// 合并单元格自动居中
+								cell.style.textAlign = 'center';
+								cell.style.verticalAlign = 'middle';
 							}
 						} else {
 							cellContent = String(cellInfo || '');
 						}
 
-						// 创建单元格
-						const cell = rowIdx === 0 ? document.createElement('th') : document.createElement('td');
-						
-						// 应用样式
-						if (cellStyle) {
-							Object.keys(cellStyle).forEach(key => {
-								cell.style[key] = cellStyle[key];
-							});
+						cell.textContent = cellContent;
+
+						// 设置data属性
+						if (cellType === 'field') {
+							cell.dataset.type = 'field';
+							if (tableName) cell.dataset.table = tableName;
+							if (fieldName) cell.dataset.name = fieldName;
+							if (displayName) cell.dataset.displayName = displayName;
 						}
 
-						// 第一行是表头
-						if (rowIdx === 0) {
-							cell.textContent = cellContent;
-							thead.appendChild(cell);
-						} else {
-							// 数据行：如果是field类型，需要填充实际数据
-							if (cellType === 'field' && tableName && fieldName) {
-								// 这是一个字段单元格，需要根据行号填充数据
-								const dataRowIndex = rowIdx - 1; // 减去表头行
-								
-								if (tableDataMap[tableName] && tableDataMap[tableName].data) {
-									const tableData = tableDataMap[tableName].data;
-									if (dataRowIndex < tableData.length) {
-										const dataItem = tableData[dataRowIndex];
-										cell.textContent = dataItem[fieldName] !== undefined ? dataItem[fieldName] : '';
-									} else {
-										cell.textContent = '';
-									}
-								} else {
-									cell.textContent = cellContent;
-								}
-							} else {
-								// 普通文本单元格
-								cell.textContent = cellContent;
-							}
-							
-							tr.appendChild(cell);
-						}
+						tr.appendChild(cell);
+						hasAnyCell = true;
 					});
 
-					if (rowIdx === 0) {
-						thead.appendChild(tr);
-					} else {
-						tbody.appendChild(tr);
+					// 总是添加行（包括空行，它们可能被合并单元格占据）
+					// 至少要有行号列
+					if (tr.cells.length === 0) {
+						// 完全没有单元格，至少创建行号列
+						const cell = document.createElement('td');
+						cell.textContent = '';
+						tr.appendChild(cell);
 					}
-				});
-
-				// 如果有字段单元格，需要补充更多数据行
-				if (usedTables.size === 1) {
-					const tableName = Array.from(usedTables)[0];
-					if (tableDataMap[tableName] && tableDataMap[tableName].data) {
-						const tableData = tableDataMap[tableName].data;
-						const existingDataRows = rows.length - 1; // 减去表头行
-						
-						// 如果数据行数多于配置中的行数，需要补充
-						if (tableData.length > existingDataRows) {
-							const templateRow = rows[rows.length - 1]; // 使用最后一行作为模板
-							
-							for (let i = existingDataRows; i < tableData.length; i++) {
-								const tr = document.createElement('tr');
-								const dataItem = tableData[i];
-								
-								templateRow.forEach((cellInfo, cellIdx) => {
-									const cell = document.createElement('td');
-									let tableName = '';
-									let fieldName = '';
-									let cellStyle = {};
-									
-									if (typeof cellInfo === 'object' && cellInfo !== null) {
-										if (cellInfo.data) {
-											try {
-												const dataObj = typeof cellInfo.data === 'string' ? JSON.parse(cellInfo.data) : cellInfo.data;
-												tableName = dataObj.table || dataObj.tableName || '';
-												fieldName = dataObj.field || dataObj.fieldName || dataObj.name || '';
-											} catch (e) {}
-										}
-										
-										if (cellInfo.style) {
-											try {
-												cellStyle = typeof cellInfo.style === 'string' ? JSON.parse(cellInfo.style) : cellInfo.style;
-											} catch (e) {}
-										}
-									}
-									
-									// 应用样式
-									Object.keys(cellStyle).forEach(key => {
-										cell.style[key] = cellStyle[key];
-									});
-									
-									// 填充数据
-									if (fieldName) {
-										cell.textContent = dataItem[fieldName] !== undefined ? dataItem[fieldName] : '';
-									} else {
-										cell.textContent = '';
-									}
-									
-									tr.appendChild(cell);
-								});
-								
-								tbody.appendChild(tr);
-							}
-						}
-					}
+					tbody.appendChild(tr);
 				}
-
-				table.appendChild(thead);
-				table.appendChild(tbody);
-				container.innerHTML = '';
-				container.appendChild(table);
-			}
-
-			/**
-			 * 显示对象格式的表格 - 已废弃，使用新的统一逻辑
-			 */
-			function displayObjectFormatTable_deprecated(rows) {
-				const container = document.getElementById('table-content');
-				const table = document.createElement('table');
-				table.className = 'preview-table';
-
-				const thead = document.createElement('thead');
-				const tbody = document.createElement('tbody');
-
-				// 收集所有用到的表名
-				const usedTables = new Set();
-
-				// 找到所有的列（从第一行对象的键中获取，排除__row）
-				let columns = [];
-				if (rows.length > 0) {
-					columns = Object.keys(rows[0]).filter(key => key !== '__row');
-				}
+			} else if (typeof tableData[0] === 'object') {
+				// 对象数组格式
+				const columns = Object.keys(tableData[0]).filter(key => key !== '__row');
 
 				// 创建表头
 				const headerRow = document.createElement('tr');
 				columns.forEach(col => {
 					const th = document.createElement('th');
-					const cellData = rows[0][col];
+					const cellData = tableData[0][col];
 					if (cellData && typeof cellData === 'object') {
 						th.textContent = cellData.content || col;
-						
-						// 应用样式
 						if (cellData.style) {
 							try {
 								const style = typeof cellData.style === 'string' ? JSON.parse(cellData.style) : cellData.style;
 								Object.keys(style).forEach(key => {
 									th.style[key] = style[key];
 								});
-							} catch (e) {}
+							} catch (e) { }
 						}
 					} else {
 						th.textContent = col;
@@ -1448,212 +997,659 @@
 				thead.appendChild(headerRow);
 
 				// 创建数据行
-				rows.slice(1).forEach((row, rowIdx) => {
+				tableData.slice(1).forEach(row => {
 					const tr = document.createElement('tr');
-					
 					columns.forEach(col => {
 						const td = document.createElement('td');
 						const cellData = row[col];
-						
+
 						if (cellData && typeof cellData === 'object') {
-							let cellContent = cellData.content || '';
+							td.textContent = cellData.content || '';
 							const cellType = cellData.type || 'text';
-							
-							// 解析data字段
-							let tableName = '';
-							let fieldName = '';
-							if (cellData.data) {
+
+							if (cellType === 'field' && cellData.data) {
 								try {
 									const dataObj = typeof cellData.data === 'string' ? JSON.parse(cellData.data) : cellData.data;
-									tableName = dataObj.table || dataObj.tableName || '';
-									fieldName = dataObj.field || dataObj.fieldName || dataObj.name || '';
-									
-									if (tableName) {
-										usedTables.add(tableName);
-									}
-								} catch (e) {}
+									td.dataset.type = 'field';
+									if (dataObj.table) td.dataset.table = dataObj.table;
+									if (dataObj.field) td.dataset.name = dataObj.field;
+									if (dataObj.displayName) td.dataset.displayName = dataObj.displayName;
+								} catch (e) { }
 							}
-							
-							// 如果是field类型，填充实际数据
-							if (cellType === 'field' && tableName && fieldName) {
-								if (tableDataMap[tableName] && tableDataMap[tableName].data) {
-									const tableData = tableDataMap[tableName].data;
-									if (rowIdx < tableData.length) {
-										const dataItem = tableData[rowIdx];
-										cellContent = dataItem[fieldName] !== undefined ? dataItem[fieldName] : '';
-									}
-								}
-							}
-							
-							td.textContent = cellContent;
-							
-							// 应用样式
+
 							if (cellData.style) {
 								try {
 									const style = typeof cellData.style === 'string' ? JSON.parse(cellData.style) : cellData.style;
 									Object.keys(style).forEach(key => {
 										td.style[key] = style[key];
 									});
-								} catch (e) {}
+								} catch (e) { }
 							}
 						} else {
 							td.textContent = cellData || '';
 						}
-						
+
 						tr.appendChild(td);
 					});
-					
 					tbody.appendChild(tr);
 				});
+			}
 
-				// 补充更多数据行（如果需要）
-				if (usedTables.size === 1) {
-					const tableName = Array.from(usedTables)[0];
-					if (tableDataMap[tableName] && tableDataMap[tableName].data) {
-						const tableData = tableDataMap[tableName].data;
-						const existingDataRows = rows.length - 1;
-						
-						if (tableData.length > existingDataRows) {
-							const templateRow = rows[rows.length - 1];
-							
-							for (let i = existingDataRows; i < tableData.length; i++) {
-								const tr = document.createElement('tr');
-								const dataItem = tableData[i];
-								
-								columns.forEach(col => {
-									const td = document.createElement('td');
-									const cellTemplate = templateRow[col];
-									
-									if (cellTemplate && typeof cellTemplate === 'object') {
-										let fieldName = '';
-										if (cellTemplate.data) {
-											try {
-												const dataObj = typeof cellTemplate.data === 'string' ? JSON.parse(cellTemplate.data) : cellTemplate.data;
-												fieldName = dataObj.field || dataObj.fieldName || dataObj.name || '';
-											} catch (e) {}
-										}
-										
-										if (fieldName) {
-											td.textContent = dataItem[fieldName] !== undefined ? dataItem[fieldName] : '';
-										} else {
-											td.textContent = '';
-										}
-										
-										// 应用样式
-										if (cellTemplate.style) {
-											try {
-												const style = typeof cellTemplate.style === 'string' ? JSON.parse(cellTemplate.style) : cellTemplate.style;
-												Object.keys(style).forEach(key => {
-													td.style[key] = style[key];
-												});
-											} catch (e) {}
-										}
-									} else {
-										td.textContent = '';
-									}
-									
-									tr.appendChild(td);
-								});
-								
-								tbody.appendChild(tr);
-							}
+			table.appendChild(thead);
+			table.appendChild(tbody);
+			return table;
+		}
+
+		/**
+		 * 复制表格计算样式
+		 */
+		function copyTableComputedStyles(designTable, cloneTable) {
+			if (!designTable || !cloneTable) return;
+
+			const tableProps = ['width', 'max-width', 'font-family', 'font-size', 'border-collapse', 'box-sizing'];
+			const tableCs = window.getComputedStyle(designTable);
+			tableProps.forEach(p => {
+				try {
+					const v = tableCs.getPropertyValue(p);
+					if (v) {
+						const jsProp = p.replace(/-([a-z])/g, (m, p1) => p1.toUpperCase());
+						cloneTable.style[jsProp] = v;
+					}
+				} catch (e) { }
+			});
+
+			const srcRows = Array.from(designTable.rows || []);
+			const tgtRows = Array.from(cloneTable.rows || []);
+			const rowCount = Math.min(srcRows.length, tgtRows.length);
+			for (let r = 0; r < rowCount; r++) {
+				const srcCells = Array.from(srcRows[r].cells || []);
+				const tgtCells = Array.from(tgtRows[r].cells || []);
+				const cellCount = Math.min(srcCells.length, tgtCells.length);
+				for (let c = 0; c < cellCount; c++) {
+					copyComputedStylesToInline(srcCells[c], tgtCells[c]);
+				}
+			}
+		}
+
+		/**
+		 * 应用单元格合并信息到克隆的表格
+		 * 注意：createVirtualDesignTable已经处理了colspan/rowspan，这里只需确认
+		 */
+		function applyCellMergeInfo(cloneTable, mergeInfo) {
+			if (!mergeInfo || typeof mergeInfo !== 'object') return;
+
+			console.log('应用单元格合并信息到查询结果表格:', mergeInfo);
+			console.log('当前表格结构:', {
+				totalRows: cloneTable.rows.length,
+				theadRows: cloneTable.tHead ? cloneTable.tHead.rows.length : 0,
+				tbodyRows: cloneTable.tBodies[0] ? cloneTable.tBodies[0].rows.length : 0
+			});
+
+			// 由于createVirtualDesignTable已经处理了colspan和rowspan
+			// 这里只需要记录日志，不需要再次应用
+			console.log('合并信息已在虚拟表格创建时应用');
+		}
+
+		/**
+		 * 收集字段映射和最大字段行
+		 */
+		function collectFieldMapAndMaxRow(designTable) {
+			const fieldMap = new Map();
+			let maxFieldRow = -1;
+			for (let r = 0; r < designTable.rows.length; r++) {
+				const row = designTable.rows[r];
+				for (let c = 0; c < row.cells.length; c++) {
+					const cell = row.cells[c];
+					if (cell && cell.dataset && cell.dataset.type === 'field' && cell.dataset.table && cell.dataset.name) {
+						fieldMap.set(c, {
+							tableName: cell.dataset.table,
+							fieldName: cell.dataset.name,
+							rowIndex: r
+						});
+						if (r > maxFieldRow) maxFieldRow = r;
+					}
+				}
+			}
+			return { fieldMap, maxFieldRow };
+		}
+
+		/**
+		 * 填充表格数据
+		 */
+		function fillTableData(cloneTable, fieldMap, usedTables, maxFieldRow) {
+			if (usedTables.size !== 1) return;
+
+			const tableName = Array.from(usedTables)[0];
+			if (!window.tableDataMap || !window.tableDataMap[tableName]) return;
+
+			const tableData = window.tableDataMap[tableName].data || [];
+			// 修复：正确计算表头行数 - 表头应该是字段单元格所在行及之前的所有行
+			const headerCount = maxFieldRow >= 0 ? (maxFieldRow + 1) : 0;
+			const cloneTbody = (cloneTable.tBodies && cloneTable.tBodies[0]) || cloneTable.createTBody();
+
+			let effectiveMaxFieldRow = maxFieldRow;
+			if (effectiveMaxFieldRow < 0) {
+				effectiveMaxFieldRow = cloneTable.rows.length - 1;
+			}
+
+			// 修复：数据应该插入到字段行之后，即从 maxFieldRow + 1 行开始
+			let insertIndexInTbody = 0;
+			const theadRowCount = (cloneTable.tHead && cloneTable.tHead.rows.length) ? cloneTable.tHead.rows.length : 0;
+			if (effectiveMaxFieldRow >= theadRowCount) {
+				insertIndexInTbody = effectiveMaxFieldRow - theadRowCount + 1;
+				if (insertIndexInTbody < 0) insertIndexInTbody = 0;
+			}
+
+			let templateRow = null;
+			if (cloneTbody.rows.length > 0) {
+				templateRow = cloneTbody.rows[cloneTbody.rows.length - 1];
+			}
+
+			const firstRow = (cloneTable.tHead && cloneTable.tHead.rows.length > 0) ? cloneTable.tHead.rows[0] :
+				((cloneTable.rows && cloneTable.rows.length > 0) ? cloneTable.rows[0] : null);
+			const colCount = firstRow ? firstRow.cells.length : 5;
+
+			for (let i = 0; i < tableData.length; i++) {
+				const dataItem = tableData[i];
+				const targetIndex = insertIndexInTbody + i;
+				let targetRow = null;
+
+				if (targetIndex < cloneTbody.rows.length) {
+					targetRow = cloneTbody.rows[targetIndex];
+				} else {
+					if (templateRow) {
+						targetRow = templateRow.cloneNode(true);
+						Array.from(targetRow.cells || []).forEach(td => td.textContent = '');
+					} else {
+						targetRow = document.createElement('tr');
+						for (let c = 0; c < colCount; c++) {
+							const td = document.createElement('td');
+							td.textContent = '';
+							targetRow.appendChild(td);
 						}
+					}
+
+					if (targetIndex >= cloneTbody.rows.length) {
+						cloneTbody.appendChild(targetRow);
+					} else {
+						cloneTbody.insertBefore(targetRow, cloneTbody.rows[targetIndex]);
 					}
 				}
 
-				table.appendChild(thead);
-				table.appendChild(tbody);
-				container.innerHTML = '';
-				container.appendChild(table);
+				for (let c = 0; c < colCount; c++) {
+					if (!targetRow.cells[c]) {
+						while (targetRow.cells.length <= c) {
+							const newTd = document.createElement('td');
+							targetRow.appendChild(newTd);
+						}
+					}
+					const td = targetRow.cells[c];
+					const mapping = fieldMap.get(c);
+					if (mapping) {
+						td.textContent = dataItem[mapping.fieldName] !== undefined ? dataItem[mapping.fieldName] : '';
+					}
+				}
+			}
+		}
+
+		/**
+		 * 重新编号所有tbody行
+		 */
+		function renumberCloneTableRows(cloneTable) {
+			if (!cloneTable) return;
+
+			// 只处理tbody中的行，不处理thead
+			const tbodies = cloneTable.tBodies && cloneTable.tBodies.length ? Array.from(cloneTable.tBodies) : [];
+
+			if (tbodies.length === 0) {
+				console.error('没有找到tbody，跳过行号重新编号');
+				return;
 			}
 
-			/**
-			 * 为表格添加列宽调整功能
-			 */
-			function addColumnResizeFeature(table) {
-				if (!table) return;
-				
-				const headers = table.querySelectorAll('th');
-				let isResizing = false;
-				let currentHeader = null;
-				let startX = 0;
-				let startWidth = 0;
-				
-				headers.forEach((header, index) => {
-					header.addEventListener('mousedown', function(e) {
-						// 只在表头右侧边缘触发（5px范围内）
-						const rect = this.getBoundingClientRect();
-						const offsetX = e.clientX - rect.left;
-						
-						if (rect.width - offsetX <= 5) {
-							isResizing = true;
-							currentHeader = this;
-							startX = e.clientX;
-							startWidth = rect.width;
-							
-							e.preventDefault();
-							document.body.style.cursor = 'col-resize';
-						}
-					});
-				});
-				
-				document.addEventListener('mousemove', function(e) {
-					if (!isResizing || !currentHeader) return;
-					
-					const diff = e.clientX - startX;
-					const newWidth = Math.max(60, startWidth + diff); // 最小宽度60px
-					
-					// 设置当前列的所有单元格宽度
-					const headerIndex = Array.from(currentHeader.parentElement.children).indexOf(currentHeader);
-					const rows = currentHeader.closest('table').rows;
-					
-					for (let i = 0; i < rows.length; i++) {
-						if (rows[i].cells[headerIndex]) {
-							rows[i].cells[headerIndex].style.width = newWidth + 'px';
-							rows[i].cells[headerIndex].style.minWidth = newWidth + 'px';
-							rows[i].cells[headerIndex].style.maxWidth = newWidth + 'px';
+			let counter = 1;
+			tbodies.forEach(tb => {
+				const rows = Array.from(tb.rows || []);
+				rows.forEach((row, rowIndex) => {
+					// 跳过第一行（列标题行），它的第一个单元格都是th
+					if (rowIndex === 0 && row.cells && row.cells.length > 0 && row.cells[0].tagName === 'TH') {
+						return;
+					}
+
+					// 只给有第一个单元格的行编号
+					if (row.cells && row.cells.length > 0) {
+						const firstCell = row.cells[0];
+						// 只有td类型的才编号（跳过th）
+						if (firstCell.tagName === 'TD') {
+							firstCell.textContent = (counter++).toString();
 						}
 					}
 				});
-				
-				document.addEventListener('mouseup', function() {
-					if (isResizing) {
-						isResizing = false;
-						currentHeader = null;
-						document.body.style.cursor = '';
-					}
-				});
-			}
-
-			// 测试数据（开发时使用）
-			if (window.location.search.includes('test=1')) {
-				setTimeout(() => {
-					const testConfig = {
-						"tableData": [
-							[
-								{"value": "", "type": "text"},
-								{"value": "客户ID", "type": "text"},
-								{"value": "客户姓名", "type": "text"},
-								{"value": "身份证号", "type": "text"}
-							],
-							[
-								{"value": "1", "type": "text"},
-								{"value": "{客户信息表.客户ID}", "type": "field", "data": "{\"table\":\"客户信息表\",\"field\":\"客户ID\"}"},
-								{"value": "{客户信息表.客户姓名}", "type": "field", "data": "{\"table\":\"客户信息表\",\"field\":\"客户姓名\"}"},
-								{"value": "{客户信息表.身份证号}", "type": "field", "data": "{\"table\":\"客户信息表\",\"field\":\"身份证号\"}"}
-							]
-						]
-					};
-					displayDetailTable(testConfig);
-				}, 100);
-			}
-			
-			// 页面加载时初始化SDK
-			document.addEventListener('DOMContentLoaded', async function() {
-				console.log('页面加载完成，初始化SDK...');
-				await initializeSDK();
 			});
-		</script>
-	</body>
 
-	</html>
+			console.log(`已重新编号 ${counter - 1} 个数据行`);
+		}
+
+		/**
+		 * 显示数组格式的表格 (2D数组) - 已废弃，使用新的统一逻辑
+		 */
+		function displayArrayFormatTable_deprecated(rows) {
+			const container = document.getElementById('table-content');
+			const table = document.createElement('table');
+			table.className = 'preview-table';
+
+			const thead = document.createElement('thead');
+			const tbody = document.createElement('tbody');
+
+			// 收集所有用到的表名
+			const usedTables = new Set();
+
+			// 处理每一行
+			rows.forEach((row, rowIdx) => {
+				if (!Array.isArray(row)) return;
+
+				const tr = document.createElement('tr');
+
+				row.forEach((cellInfo, cellIdx) => {
+					let cellContent = '';
+					let cellStyle = {};
+					let cellType = 'text';
+					let tableName = '';
+					let fieldName = '';
+
+					// 解析单元格信息
+					if (typeof cellInfo === 'object' && cellInfo !== null) {
+						cellContent = cellInfo.value || cellInfo.content || '';
+						cellType = cellInfo.type || 'text';
+
+						// 从data字段中提取表名和字段名
+						if (cellInfo.data) {
+							try {
+								const dataObj = typeof cellInfo.data === 'string' ? JSON.parse(cellInfo.data) : cellInfo.data;
+								tableName = dataObj.table || dataObj.tableName || '';
+								fieldName = dataObj.field || dataObj.fieldName || dataObj.name || '';
+
+								if (tableName) {
+									usedTables.add(tableName);
+								}
+							} catch (e) {
+								console.error('解析单元格data失败:', e);
+							}
+						}
+
+						// 解析样式
+						if (cellInfo.style) {
+							try {
+								cellStyle = typeof cellInfo.style === 'string' ? JSON.parse(cellInfo.style) : cellInfo.style;
+							} catch (e) {
+								console.error('解析单元格样式失败:', e);
+							}
+						}
+					} else {
+						cellContent = String(cellInfo || '');
+					}
+
+					// 创建单元格
+					const cell = rowIdx === 0 ? document.createElement('th') : document.createElement('td');
+
+					// 应用样式
+					if (cellStyle) {
+						Object.keys(cellStyle).forEach(key => {
+							cell.style[key] = cellStyle[key];
+						});
+					}
+
+					// 第一行是表头
+					if (rowIdx === 0) {
+						cell.textContent = cellContent;
+						thead.appendChild(cell);
+					} else {
+						// 数据行：如果是field类型，需要填充实际数据
+						if (cellType === 'field' && tableName && fieldName) {
+							// 这是一个字段单元格，需要根据行号填充数据
+							const dataRowIndex = rowIdx - 1; // 减去表头行
+
+							if (tableDataMap[tableName] && tableDataMap[tableName].data) {
+								const tableData = tableDataMap[tableName].data;
+								if (dataRowIndex < tableData.length) {
+									const dataItem = tableData[dataRowIndex];
+									cell.textContent = dataItem[fieldName] !== undefined ? dataItem[fieldName] : '';
+								} else {
+									cell.textContent = '';
+								}
+							} else {
+								cell.textContent = cellContent;
+							}
+						} else {
+							// 普通文本单元格
+							cell.textContent = cellContent;
+						}
+
+						tr.appendChild(cell);
+					}
+				});
+
+				if (rowIdx === 0) {
+					thead.appendChild(tr);
+				} else {
+					tbody.appendChild(tr);
+				}
+			});
+
+			// 如果有字段单元格，需要补充更多数据行
+			if (usedTables.size === 1) {
+				const tableName = Array.from(usedTables)[0];
+				if (tableDataMap[tableName] && tableDataMap[tableName].data) {
+					const tableData = tableDataMap[tableName].data;
+					const existingDataRows = rows.length - 1; // 减去表头行
+
+					// 如果数据行数多于配置中的行数，需要补充
+					if (tableData.length > existingDataRows) {
+						const templateRow = rows[rows.length - 1]; // 使用最后一行作为模板
+
+						for (let i = existingDataRows; i < tableData.length; i++) {
+							const tr = document.createElement('tr');
+							const dataItem = tableData[i];
+
+							templateRow.forEach((cellInfo, cellIdx) => {
+								const cell = document.createElement('td');
+								let tableName = '';
+								let fieldName = '';
+								let cellStyle = {};
+
+								if (typeof cellInfo === 'object' && cellInfo !== null) {
+									if (cellInfo.data) {
+										try {
+											const dataObj = typeof cellInfo.data === 'string' ? JSON.parse(cellInfo.data) : cellInfo.data;
+											tableName = dataObj.table || dataObj.tableName || '';
+											fieldName = dataObj.field || dataObj.fieldName || dataObj.name || '';
+										} catch (e) { }
+									}
+
+									if (cellInfo.style) {
+										try {
+											cellStyle = typeof cellInfo.style === 'string' ? JSON.parse(cellInfo.style) : cellInfo.style;
+										} catch (e) { }
+									}
+								}
+
+								// 应用样式
+								Object.keys(cellStyle).forEach(key => {
+									cell.style[key] = cellStyle[key];
+								});
+
+								// 填充数据
+								if (fieldName) {
+									cell.textContent = dataItem[fieldName] !== undefined ? dataItem[fieldName] : '';
+								} else {
+									cell.textContent = '';
+								}
+
+								tr.appendChild(cell);
+							});
+
+							tbody.appendChild(tr);
+						}
+					}
+				}
+			}
+
+			table.appendChild(thead);
+			table.appendChild(tbody);
+			container.innerHTML = '';
+			container.appendChild(table);
+		}
+
+		/**
+		 * 显示对象格式的表格 - 已废弃，使用新的统一逻辑
+		 */
+		function displayObjectFormatTable_deprecated(rows) {
+			const container = document.getElementById('table-content');
+			const table = document.createElement('table');
+			table.className = 'preview-table';
+
+			const thead = document.createElement('thead');
+			const tbody = document.createElement('tbody');
+
+			// 收集所有用到的表名
+			const usedTables = new Set();
+
+			// 找到所有的列（从第一行对象的键中获取，排除__row）
+			let columns = [];
+			if (rows.length > 0) {
+				columns = Object.keys(rows[0]).filter(key => key !== '__row');
+			}
+
+			// 创建表头
+			const headerRow = document.createElement('tr');
+			columns.forEach(col => {
+				const th = document.createElement('th');
+				const cellData = rows[0][col];
+				if (cellData && typeof cellData === 'object') {
+					th.textContent = cellData.content || col;
+
+					// 应用样式
+					if (cellData.style) {
+						try {
+							const style = typeof cellData.style === 'string' ? JSON.parse(cellData.style) : cellData.style;
+							Object.keys(style).forEach(key => {
+								th.style[key] = style[key];
+							});
+						} catch (e) { }
+					}
+				} else {
+					th.textContent = col;
+				}
+				headerRow.appendChild(th);
+			});
+			thead.appendChild(headerRow);
+
+			// 创建数据行
+			rows.slice(1).forEach((row, rowIdx) => {
+				const tr = document.createElement('tr');
+
+				columns.forEach(col => {
+					const td = document.createElement('td');
+					const cellData = row[col];
+
+					if (cellData && typeof cellData === 'object') {
+						let cellContent = cellData.content || '';
+						const cellType = cellData.type || 'text';
+
+						// 解析data字段
+						let tableName = '';
+						let fieldName = '';
+						if (cellData.data) {
+							try {
+								const dataObj = typeof cellData.data === 'string' ? JSON.parse(cellData.data) : cellData.data;
+								tableName = dataObj.table || dataObj.tableName || '';
+								fieldName = dataObj.field || dataObj.fieldName || dataObj.name || '';
+
+								if (tableName) {
+									usedTables.add(tableName);
+								}
+							} catch (e) { }
+						}
+
+						// 如果是field类型，填充实际数据
+						if (cellType === 'field' && tableName && fieldName) {
+							if (tableDataMap[tableName] && tableDataMap[tableName].data) {
+								const tableData = tableDataMap[tableName].data;
+								if (rowIdx < tableData.length) {
+									const dataItem = tableData[rowIdx];
+									cellContent = dataItem[fieldName] !== undefined ? dataItem[fieldName] : '';
+								}
+							}
+						}
+
+						td.textContent = cellContent;
+
+						// 应用样式
+						if (cellData.style) {
+							try {
+								const style = typeof cellData.style === 'string' ? JSON.parse(cellData.style) : cellData.style;
+								Object.keys(style).forEach(key => {
+									td.style[key] = style[key];
+								});
+							} catch (e) { }
+						}
+					} else {
+						td.textContent = cellData || '';
+					}
+
+					tr.appendChild(td);
+				});
+
+				tbody.appendChild(tr);
+			});
+
+			// 补充更多数据行（如果需要）
+			if (usedTables.size === 1) {
+				const tableName = Array.from(usedTables)[0];
+				if (tableDataMap[tableName] && tableDataMap[tableName].data) {
+					const tableData = tableDataMap[tableName].data;
+					const existingDataRows = rows.length - 1;
+
+					if (tableData.length > existingDataRows) {
+						const templateRow = rows[rows.length - 1];
+
+						for (let i = existingDataRows; i < tableData.length; i++) {
+							const tr = document.createElement('tr');
+							const dataItem = tableData[i];
+
+							columns.forEach(col => {
+								const td = document.createElement('td');
+								const cellTemplate = templateRow[col];
+
+								if (cellTemplate && typeof cellTemplate === 'object') {
+									let fieldName = '';
+									if (cellTemplate.data) {
+										try {
+											const dataObj = typeof cellTemplate.data === 'string' ? JSON.parse(cellTemplate.data) : cellTemplate.data;
+											fieldName = dataObj.field || dataObj.fieldName || dataObj.name || '';
+										} catch (e) { }
+									}
+
+									if (fieldName) {
+										td.textContent = dataItem[fieldName] !== undefined ? dataItem[fieldName] : '';
+									} else {
+										td.textContent = '';
+									}
+
+									// 应用样式
+									if (cellTemplate.style) {
+										try {
+											const style = typeof cellTemplate.style === 'string' ? JSON.parse(cellTemplate.style) : cellTemplate.style;
+											Object.keys(style).forEach(key => {
+												td.style[key] = style[key];
+											});
+										} catch (e) { }
+									}
+								} else {
+									td.textContent = '';
+								}
+
+								tr.appendChild(td);
+							});
+
+							tbody.appendChild(tr);
+						}
+					}
+				}
+			}
+
+			table.appendChild(thead);
+			table.appendChild(tbody);
+			container.innerHTML = '';
+			container.appendChild(table);
+		}
+
+		/**
+		 * 为表格添加列宽调整功能
+		 */
+		function addColumnResizeFeature(table) {
+			if (!table) return;
+
+			const headers = table.querySelectorAll('th');
+			let isResizing = false;
+			let currentHeader = null;
+			let startX = 0;
+			let startWidth = 0;
+
+			headers.forEach((header, index) => {
+				header.addEventListener('mousedown', function (e) {
+					// 只在表头右侧边缘触发（5px范围内）
+					const rect = this.getBoundingClientRect();
+					const offsetX = e.clientX - rect.left;
+
+					if (rect.width - offsetX <= 5) {
+						isResizing = true;
+						currentHeader = this;
+						startX = e.clientX;
+						startWidth = rect.width;
+
+						e.preventDefault();
+						document.body.style.cursor = 'col-resize';
+					}
+				});
+			});
+
+			document.addEventListener('mousemove', function (e) {
+				if (!isResizing || !currentHeader) return;
+
+				const diff = e.clientX - startX;
+				const newWidth = Math.max(60, startWidth + diff); // 最小宽度60px
+
+				// 设置当前列的所有单元格宽度
+				const headerIndex = Array.from(currentHeader.parentElement.children).indexOf(currentHeader);
+				const rows = currentHeader.closest('table').rows;
+
+				for (let i = 0; i < rows.length; i++) {
+					if (rows[i].cells[headerIndex]) {
+						rows[i].cells[headerIndex].style.width = newWidth + 'px';
+						rows[i].cells[headerIndex].style.minWidth = newWidth + 'px';
+						rows[i].cells[headerIndex].style.maxWidth = newWidth + 'px';
+					}
+				}
+			});
+
+			document.addEventListener('mouseup', function () {
+				if (isResizing) {
+					isResizing = false;
+					currentHeader = null;
+					document.body.style.cursor = '';
+				}
+			});
+		}
+
+		// 测试数据（开发时使用）
+		if (window.location.search.includes('test=1')) {
+			setTimeout(() => {
+				const testConfig = {
+					"tableData": [
+						[
+							{ "value": "", "type": "text" },
+							{ "value": "客户ID", "type": "text" },
+							{ "value": "客户姓名", "type": "text" },
+							{ "value": "身份证号", "type": "text" }
+						],
+						[
+							{ "value": "1", "type": "text" },
+							{ "value": "{客户信息表.客户ID}", "type": "field", "data": "{\"table\":\"客户信息表\",\"field\":\"客户ID\"}" },
+							{ "value": "{客户信息表.客户姓名}", "type": "field", "data": "{\"table\":\"客户信息表\",\"field\":\"客户姓名\"}" },
+							{ "value": "{客户信息表.身份证号}", "type": "field", "data": "{\"table\":\"客户信息表\",\"field\":\"身份证号\"}" }
+						]
+					]
+				};
+				displayDetailTable(testConfig);
+			}, 100);
+		}
+
+		// 页面加载时初始化SDK
+		document.addEventListener('DOMContentLoaded', async function () {
+			console.log('页面加载完成，初始化SDK...');
+			sdk = await window.initializeSDK();
+		});
+	</script>
+</body>
+
+</html>
