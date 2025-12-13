@@ -1,12 +1,12 @@
 // 过滤管理器 - 处理过滤字段的添加、删除和保存
 
-(function() {
+(function () {
     'use strict';
 
     // 初始化过滤管理器
     function initFilterManager() {
-        console.log('初始化过滤管理器');
-        
+        // console.log('初始化过滤管理器');
+
         const filterContainer = document.getElementById('filter-fields-container');
         if (!filterContainer) {
             console.warn('未找到过滤字段容器');
@@ -15,20 +15,20 @@
 
         // 设置过滤容器为拖放目标
         setupFilterDropZone(filterContainer);
-        
+
         // 加载已保存的过滤字段配置
         loadFilterFields();
     }
 
     // 设置过滤区域的拖放功能
     function setupFilterDropZone(container) {
-        container.addEventListener('dragover', function(e) {
+        container.addEventListener('dragover', function (e) {
             e.preventDefault();
             e.stopPropagation();
             container.classList.add('drag-over');
         });
 
-        container.addEventListener('dragleave', function(e) {
+        container.addEventListener('dragleave', function (e) {
             e.preventDefault();
             e.stopPropagation();
             if (e.target === container) {
@@ -36,7 +36,7 @@
             }
         });
 
-        container.addEventListener('drop', function(e) {
+        container.addEventListener('drop', function (e) {
             e.preventDefault();
             e.stopPropagation();
             container.classList.remove('drag-over');
@@ -47,11 +47,11 @@
 
             try {
                 const field = JSON.parse(fieldData);
-                console.log('过滤区域接收到字段:', field);
-                
+                // console.log('过滤区域接收到字段:', field);
+
                 // 添加过滤字段
                 addFilterField(field);
-                
+
                 // 保存配置
                 saveFilterFields();
             } catch (error) {
@@ -81,7 +81,7 @@
             const existingTable = item.dataset.table;
             const existingField = item.dataset.field;
             if (existingTable === tableName && existingField === fieldName) {
-                console.log('过滤字段已存在，不重复添加');
+                // console.log('过滤字段已存在，不重复添加');
                 return;
             }
         }
@@ -102,7 +102,7 @@
         removeBtn.className = 'remove-filter';
         removeBtn.textContent = '×';
         removeBtn.title = '移除过滤字段';
-        removeBtn.addEventListener('click', function(e) {
+        removeBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             filterItem.remove();
             saveFilterFields();
@@ -112,7 +112,7 @@
         filterItem.appendChild(removeBtn);
         container.appendChild(filterItem);
 
-        console.log('已添加过滤字段:', field);
+        // console.log('已添加过滤字段:', field);
     }
 
     // 保存过滤字段配置
@@ -122,7 +122,7 @@
 
         const filterFields = [];
         const items = container.querySelectorAll('.filter-field-item');
-        
+
         items.forEach(item => {
             filterFields.push({
                 table: item.dataset.table,
@@ -137,7 +137,7 @@
                 window.currentNodeInfo.config = {};
             }
             window.currentNodeInfo.config.filterFields = filterFields;
-            console.log('过滤字段已保存到配置:', filterFields);
+            // console.log('过滤字段已保存到配置:', filterFields);
         }
 
         return filterFields;
@@ -145,14 +145,14 @@
 
     // 加载已保存的过滤字段
     function loadFilterFields() {
-        if (typeof window.currentNodeInfo !== 'undefined' && 
-            window.currentNodeInfo && 
-            window.currentNodeInfo.config && 
+        if (typeof window.currentNodeInfo !== 'undefined' &&
+            window.currentNodeInfo &&
+            window.currentNodeInfo.config &&
             window.currentNodeInfo.config.filterFields) {
-            
+
             const filterFields = window.currentNodeInfo.config.filterFields;
-            console.log('加载已保存的过滤字段:', filterFields);
-            
+            // console.log('加载已保存的过滤字段:', filterFields);
+
             filterFields.forEach(field => {
                 addFilterField(field);
             });
@@ -166,7 +166,7 @@
 
         const filterFields = [];
         const items = container.querySelectorAll('.filter-field-item');
-        
+
         items.forEach(item => {
             filterFields.push({
                 table: item.dataset.table,

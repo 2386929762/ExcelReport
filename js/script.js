@@ -32,7 +32,7 @@ window.cellConfigurations = cellConfigurations;
 
 // 加载所有单元格配置的函数
 function loadAllCellConfigurations() {
-    console.log('开始加载所有单元格配置...');
+    // console.log('开始加载所有单元格配置...');
     try {
         // 遍历localStorage中的所有项目
         for (let i = 0; i < localStorage.length; i++) {
@@ -44,11 +44,11 @@ function loadAllCellConfigurations() {
                 if (storedConfig) {
                     const config = JSON.parse(storedConfig);
                     cellConfigurations[cellReference] = config;
-                    console.log(`加载单元格配置: ${cellReference}`, config);
+                    // console.log(`加载单元格配置: ${cellReference}`, config);
                 }
             }
         }
-        console.log('所有单元格配置加载完成，共加载', Object.keys(cellConfigurations).length, '个配置');
+        // console.log('所有单元格配置加载完成，共加载', Object.keys(cellConfigurations).length, '个配置');
     } catch (error) {
         console.error('加载单元格配置时出错:', error);
     }
@@ -74,7 +74,7 @@ function cleanCellDataAttributes(cell) {
         // 删除 localStorage 中的 cellConfig_{cellRef}
         try {
             localStorage.removeItem('cellConfig_' + cellRef);
-            console.log(`已移除 localStorage 配置: cellConfig_${cellRef}`);
+            // console.log(`已移除 localStorage 配置: cellConfig_${cellRef}`);
         } catch (e) {
             // ignore
         }
@@ -91,7 +91,7 @@ function bindDesignTableCellEvents() {
         cell.addEventListener('click', () => {
             // 自动保存前一个选中单元格配置
             if (currentSelectedCell && currentSelectedCell !== cell) {
-                console.log('自动保存前一个单元格配置');
+                // console.log('自动保存前一个单元格配置');
                 saveCellConfiguration();
             }
 
@@ -399,7 +399,7 @@ function initCellInfoElements() {
         Object.values(cellInfoElements).forEach(element => {
             if (element) {
                 element.addEventListener('blur', function () {
-                    console.log('配置项失焦，自动保存配置');
+                    // console.log('配置项失焦，自动保存配置');
                     saveCellConfiguration();
                 });
             }
@@ -418,7 +418,7 @@ function updateCellInfo(cell) {
     const colIndex = Array.from(cell.parentElement.cells).indexOf(cell);
     const colLetter = String.fromCharCode(64 + colIndex); // A, B, C...
     const cellReference = `${colLetter}${rowIndex}`;
-    console.log('单元格引用:', cellReference);
+    // console.log('单元格引用:', cellReference);
 
     // 获取单元格内容和元数据
     const content = cell.textContent;
@@ -444,7 +444,7 @@ function updateCellInfo(cell) {
         const storedConfig = localStorage.getItem('cellConfig_' + cellReference);
         if (storedConfig) {
             configFromStorage = JSON.parse(storedConfig);
-            console.log('从localStorage恢复配置:', configFromStorage);
+            // console.log('从 localStorage恢复配置:', configFromStorage);
         }
     } catch (e) {
         console.error('解析localStorage配置失败:', e);
@@ -490,7 +490,7 @@ function updateCellInfo(cell) {
 
     // 应用已保存的配置到右侧面板
     const config = cellConfigurations[cellReference];
-    console.log('恢复配置:', cellReference, config);
+    // console.log('恢复配置:', cellReference, config);
 
     // 应用基本配置
     if (cellUnit) cellUnit.value = config.unit || '';
@@ -505,7 +505,7 @@ function updateCellInfo(cell) {
 
 // 保存单元格配置（增强版本）
 function saveCellConfiguration(cellReference) {
-    console.log('开始保存单元格配置');
+    // console.log('开始保存单元格配置');
 
     // 如果没有提供单元格引用，从当前选中的单元格获取
     if (!cellReference && currentSelectedCell) {
@@ -513,7 +513,7 @@ function saveCellConfiguration(cellReference) {
         const colIndex = Array.from(currentSelectedCell.parentElement.cells).indexOf(currentSelectedCell);
         const colLetter = String.fromCharCode(64 + colIndex);
         cellReference = `${colLetter}${rowIndex}`;
-        console.log('从currentSelectedCell获取引用:', cellReference);
+        // console.log('从currentSelectedCell获取引用:', cellReference);
     }
 
     // 获取缓存的DOM元素
@@ -584,12 +584,12 @@ function saveCellConfiguration(cellReference) {
     // 为了测试和持久化，也保存到localStorage
     try {
         localStorage.setItem('cellConfig_' + cellReference, JSON.stringify(cellConfigurations[cellReference]));
-        console.log('配置已保存到localStorage');
+        // console.log('配置已保存到localStorage');
     } catch (e) {
         console.error('保存到localStorage失败:', e);
     }
 
-    console.log('保存配置:', cellReference, cellConfigurations[cellReference]);
+    // console.log('保存配置:', cellReference, cellConfigurations[cellReference]);
 
     // 静默保存，不显示提示框
 }
@@ -598,25 +598,25 @@ function saveCellConfiguration(cellReference) {
 if (typeof saveButtonBound === 'undefined') {
     window.saveButtonBound = true;
     window.addEventListener('DOMContentLoaded', function () {
-        console.log('尝试绑定保存按钮事件');
+        // console.log('尝试绑定保存按钮事件');
         // 为底部保存按钮绑定事件监听器（使用有效的选择器）
         const saveButton = document.querySelector('.bottom-actions .save-button') ||
             document.querySelector('.save-button');
 
         if (saveButton) {
-            console.log('成功绑定保存按钮事件');
+            // console.log('成功绑定保存按钮事件');
             // 先移除可能存在的事件监听器，避免重复绑定
             saveButton.removeEventListener('click', handleSaveClick);
 
             function handleSaveClick() {
-                console.log('保存按钮被点击，仅执行配置导出操作');
+                // console.log('保存按钮被点击，仅执行配置导出操作');
 
                 // 只调用导出配置功能，不再保存单元格配置
                 if (typeof handleSaveConfig === 'function') {
-                    console.log('调用导出配置功能');
+                    // console.log('调用导出配置功能');
                     handleSaveConfig();
                 } else if (window.handleSaveConfig) {
-                    console.log('通过window对象调用导出配置功能');
+                    // console.log('通过window对象调用导出配置功能');
                     window.handleSaveConfig();
                 } else {
                     console.warn('未找到导出配置功能');
@@ -630,9 +630,9 @@ if (typeof saveButtonBound === 'undefined') {
             const allButtons = document.querySelectorAll('button');
             allButtons.forEach(button => {
                 if (button.textContent.includes('保存')) {
-                    console.log('找到包含"保存"文本的按钮:', button);
+                    // console.log('找到包含"保存"文本的按钮:', button);
                     button.addEventListener('click', function () {
-                        console.log('通过文本找到的保存按钮被点击');
+                        // console.log('通过文本找到的保存按钮被点击');
                         saveCellConfiguration();
                     });
                 }
@@ -771,7 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewPageBtn = document.querySelector('.view-page-btn');
     if (viewPageBtn) {
         viewPageBtn.addEventListener('click', function () {
-            console.log('跳转到查看页');
+            // console.log('跳转到查看页');
 
             // 获取表格数据（使用与预览相同的方式）
             if (typeof collectTableDataForPreview === 'function') {
@@ -800,7 +800,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 页面卸载时自动保存当前配置，防止配置丢失
     window.addEventListener('beforeunload', () => {
         if (currentSelectedCell) {
-            console.log('页面卸载前自动保存当前单元格配置');
+            // console.log('页面卸载前自动保存当前单元格配置');
             saveCellConfiguration();
         }
     });
@@ -828,7 +828,7 @@ function addIndicatorToTable(cell, name) {
         const storedConfig = localStorage.getItem('cellConfig_' + cellReference);
         if (storedConfig) {
             const config = JSON.parse(storedConfig);
-            console.log('从localStorage加载已保存配置:', cellReference, config);
+            // console.log('从localStorage加载已保存配置:', cellReference, config);
             // 直接更新到cellConfigurations对象，确保预览时能使用正确的配置
             cellConfigurations[cellReference] = config;
         }
@@ -1248,7 +1248,7 @@ function initializeTable(rows = 20, cols = 20) {
     const tbody = table.createTBody();
     for (let i = 0; i < rows; i++) {
         const row = tbody.insertRow();
-        
+
         // 添加行号列
         const rowNumCell = row.insertCell();
         rowNumCell.textContent = i + 1;
@@ -1264,17 +1264,17 @@ function initializeTable(rows = 20, cols = 20) {
             const cell = row.insertCell();
             cell.contentEditable = true;
             cell.style.minWidth = '120px';
-            
+
             // 添加单元格点击事件
-            cell.addEventListener('click', function() {
+            cell.addEventListener('click', function () {
                 if (currentSelectedCell && currentSelectedCell !== this) {
-                    console.log('自动保存前一个单元格配置');
+                    // console.log('自动保存前一个单元格配置');
                     saveCellConfiguration();
                 }
 
                 const allCells = table.querySelectorAll('td[contenteditable="true"]');
                 allCells.forEach(c => c.classList.remove('selected'));
-                
+
                 this.classList.add('selected');
                 currentSelectedCell = this;
 
@@ -1283,7 +1283,7 @@ function initializeTable(rows = 20, cols = 20) {
             });
 
             // 监听单元格内容变化
-            cell.addEventListener('input', function() {
+            cell.addEventListener('input', function () {
                 if (this.classList.contains('selected')) {
                     const inputElement = document.querySelector('.cell-content-input');
                     if (inputElement) {
@@ -1294,7 +1294,7 @@ function initializeTable(rows = 20, cols = 20) {
         }
     }
 
-    console.log(`表格初始化完成: ${rows}行 x ${cols}列`);
+    // console.log(`表格初始化完成: ${rows}行 x ${cols}列`);
 }
 
 // 暴露函数到全局
@@ -1306,7 +1306,7 @@ function initDragAndDrop() {
     const draggableItems = document.querySelectorAll('.draggable');
     const tableCells = document.querySelectorAll('#design-table td[contenteditable="true"]');
 
-    console.log('初始化拖拽功能，找到', draggableItems.length, '个拖拽项和', tableCells.length, '个单元格');
+    // console.log('初始化拖拽功能，找到', draggableItems.length, '个拖拽项和', tableCells.length, '个单元格');
 
     // 设置拖拽源
     draggableItems.forEach(item => {
@@ -1349,28 +1349,28 @@ function initDragAndDrop() {
 }
 
 // 行列添加功能
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // 初始化表格
     initializeTable(20, 20);
-    
+
     // 表格初始化后，初始化拖拽功能
     setTimeout(() => {
         initDragAndDrop();
     }, 100);
-    
+
     // 添加行按钮
     const addRowBtn = document.getElementById('add-row-btn');
     if (addRowBtn) {
-        addRowBtn.addEventListener('click', function() {
+        addRowBtn.addEventListener('click', function () {
             const table = document.getElementById('design-table');
             if (!table) return;
-            
+
             const tbody = table.tBodies[0];
             if (!tbody) return;
-            
+
             const colCount = table.rows[0].cells.length;
             const newRow = tbody.insertRow();
-            
+
             // 添加行号
             const rowNumCell = newRow.insertCell();
             rowNumCell.textContent = tbody.rows.length;
@@ -1380,29 +1380,29 @@ document.addEventListener('DOMContentLoaded', function() {
             rowNumCell.style.textAlign = 'center';
             rowNumCell.style.width = '40px';
             rowNumCell.style.minWidth = '40px';
-            
+
             // 添加数据单元格
             for (let i = 1; i < colCount; i++) {
                 const cell = newRow.insertCell();
                 cell.contentEditable = true;
                 cell.style.minWidth = '120px';
-                
-                cell.addEventListener('click', function() {
+
+                cell.addEventListener('click', function () {
                     if (currentSelectedCell && currentSelectedCell !== this) {
                         saveCellConfiguration();
                     }
-                    
+
                     const allCells = table.querySelectorAll('td[contenteditable="true"]');
                     allCells.forEach(c => c.classList.remove('selected'));
-                    
+
                     this.classList.add('selected');
                     currentSelectedCell = this;
-                    
+
                     updateCellInfo(this);
                     updateCellSelectionInfo(this);
                 });
-                
-                cell.addEventListener('input', function() {
+
+                cell.addEventListener('input', function () {
                     if (this.classList.contains('selected')) {
                         const inputElement = document.querySelector('.cell-content-input');
                         if (inputElement) {
@@ -1411,55 +1411,55 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
             }
-            
-            console.log('已添加新行');
+
+            // console.log('已添加新行');
         });
     }
-    
+
     // 添加列按钮
     const addColBtn = document.getElementById('add-col-btn');
     if (addColBtn) {
-        addColBtn.addEventListener('click', function() {
+        addColBtn.addEventListener('click', function () {
             const table = document.getElementById('design-table');
             if (!table) return;
-            
+
             const thead = table.tHead;
             const tbody = table.tBodies[0];
             if (!thead || !tbody) return;
-            
+
             const currentColCount = thead.rows[0].cells.length;
             const newColLabel = getColumnLabel(currentColCount - 1);
-            
+
             // 在表头添加新列
             const headerRow = thead.rows[0];
             const th = document.createElement('th');
             th.textContent = newColLabel;
             th.style.minWidth = '120px';
             headerRow.appendChild(th);
-            
+
             // 在每一行添加新单元格
             for (let i = 0; i < tbody.rows.length; i++) {
                 const row = tbody.rows[i];
                 const cell = row.insertCell();
                 cell.contentEditable = true;
                 cell.style.minWidth = '120px';
-                
-                cell.addEventListener('click', function() {
+
+                cell.addEventListener('click', function () {
                     if (currentSelectedCell && currentSelectedCell !== this) {
                         saveCellConfiguration();
                     }
-                    
+
                     const allCells = table.querySelectorAll('td[contenteditable="true"]');
                     allCells.forEach(c => c.classList.remove('selected'));
-                    
+
                     this.classList.add('selected');
                     currentSelectedCell = this;
-                    
+
                     updateCellInfo(this);
                     updateCellSelectionInfo(this);
                 });
-                
-                cell.addEventListener('input', function() {
+
+                cell.addEventListener('input', function () {
                     if (this.classList.contains('selected')) {
                         const inputElement = document.querySelector('.cell-content-input');
                         if (inputElement) {
@@ -1468,8 +1468,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
             }
-            
-            console.log('已添加新列:', newColLabel);
+
+            // console.log('已添加新列:', newColLabel);
         });
     }
 });

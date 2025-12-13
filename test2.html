@@ -142,7 +142,7 @@
                         </button>
                         <button @click="openAddRootModal"
                             class="text-xs bg-white border border-gray-200 hover:border-blue-500 hover:text-blue-600 text-gray-600 px-2 py-1 rounded transition-colors shadow-sm"
-                            title="添加根目录">
+                            title="添加根节点">
                             <i class="fa-solid fa-plus"></i> 根节点
                         </button>
                     </div>
@@ -301,7 +301,7 @@
                                         <select v-model="modalForm.type" :disabled="modalMode === 'edit'"
                                             class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2.5 outline-none bg-white appearance-none disabled:bg-gray-100 disabled:text-gray-500">
                                             <option value="目录">📂 目录 (Directory)</option>
-                                            <option value="指标报表">📊 指标报表 (Report)</option>
+                                            <!-- <option value="指标报表">📊 指标报表 (Report)</option> -->
                                             <option value="明细报表">📑 明细报表 (Detail)</option>
                                         </select>
                                         <div
