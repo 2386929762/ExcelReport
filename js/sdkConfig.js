@@ -52,11 +52,13 @@ window.initializeSDK = async function () {
             busDomainCode: window.SDK_CONFIG_SETTINGS.busDomainCode
         });
 
-        // 执行登录
-        await window.sdkInstance.user.login({
-            userName: window.SDK_CONFIG_SETTINGS.credentials.username,
-            password: window.SDK_CONFIG_SETTINGS.credentials.password
-        });
+        if (!window.sdkInstance.user.isAuthenticated()) {
+            // 执行登录
+            await window.sdkInstance.user.login({
+                userName: window.SDK_CONFIG_SETTINGS.credentials.username,
+                password: window.SDK_CONFIG_SETTINGS.credentials.password
+            });
+        }
 
         // console.log('SDK初始化并登录成功');
         return window.sdkInstance;
