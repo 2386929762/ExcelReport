@@ -141,14 +141,7 @@ function addFieldToTable(cell, fieldName, tableName, fieldLabel) {
         cell.dataset.fieldLabel = fieldLabel;
     }
 
-    // 记录选中的字段到全局数组
-    if (!window.selectedCols) {
-        window.selectedCols = [];
-    }
-    if (!window.selectedCols.includes(fieldName)) {
-        window.selectedCols.push(fieldName);
-        console.log('已添加字段到selectedCols:', fieldName, '当前字段列表:', window.selectedCols);
-    }
+    console.log('字段已添加到表格单元格:', fieldName, '列索引:', colIndex);
 
     // 添加内容变化监听器
     addContentChangeListener(cell);
@@ -181,14 +174,7 @@ function addContentChangeListener(cell) {
             this.style.fontWeight = '';
             this.style.backgroundColor = '';
 
-            // 从selectedCols中移除该字段
-            if (fieldName && window.selectedCols) {
-                const index = window.selectedCols.indexOf(fieldName);
-                if (index > -1) {
-                    window.selectedCols.splice(index, 1);
-                    console.log('已从selectedCols移除字段:', fieldName, '当前字段列表:', window.selectedCols);
-                }
-            }
+            console.log('字段已从单元格移除:', fieldName);
         }
 
         // 检查是否是字段单元格，如果是，则更新表格字段

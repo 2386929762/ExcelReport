@@ -124,21 +124,65 @@ function getCurrentTableConfig() {
     const tableSelect = document.getElementById('table-select');
     const schemaSelect = document.getElementById('schema-select');
     if (datasourceSelect && tableSelect) {
-        // 保持selectedCols为字符串数组（原有格式，供SDK查询使用）
-        const selectedColsArray = (window.selectedCols || []).map(col => {
-            return typeof col === 'string' ? col : col.name;
-        });
+        console.log('=== 保存明细报表配置 ===');
+
+        // 从表格中重新收集selectedCols，确保顺序和重复字段都正确
+        const table = document.getElementById('design-table');
+        const collectedFields = [];
+
+        if (table && table.rows.length > 0) {
+            // 遍历所有行，找到包含字段的单元格
+            for (let rowIndex = 0; rowIndex < table.rows.length; rowIndex++) {
+                const row = table.rows[rowIndex];
+                const cells = row.querySelectorAll('td, th');
+
+                // 遍历该行的所有单元格
+                for (let cellIndex = 0; cellIndex < cells.length; cellIndex++) {
+                    const cell = cells[cellIndex];
+
+                    // 跳过行号列（第一列）
+                    if (cellIndex === 0) continue;
+
+                    // 如果是字段类型的单元格
+                    if (cell.dataset.type === 'field' && cell.dataset.name) {
+                        const fieldName = cell.dataset.name;
+                        const colIndex = cellIndex;
+
+                        // 检查该列是否已经记录过字段
+                        const existingField = collectedFields.find(f => f.colIndex === colIndex);
+                        if (!existingField) {
+                            // 记录字段名和列索引
+                            collectedFields.push({
+                                fieldName: fieldName,
+                                colIndex: colIndex,
+                                rowIndex: rowIndex
+                            });
+                        }
+                    }
+                }
+            }
+
+            // 按列索引排序
+            collectedFields.sort((a, b) => a.colIndex - b.colIndex);
+        }
+
+        // 提取字段名数组（保持顺序，允许重复）
+        const selectedColsArray = collectedFields.map(f => f.fieldName);
+
+        console.log('从表格收集到的字段（按列顺序）:', collectedFields);
+        console.log('selectedColsArray:', selectedColsArray);
+        console.log('window.selectedCols（旧值，仅供参考）:', window.selectedCols);
 
         // 单独保存字段的中文label映射（用于显示）
         const fieldLabels = {};
         // 添加selectedCols中的字段
-        (window.selectedCols || []).forEach(col => {
-            const colName = typeof col === 'string' ? col : col.name;
-            const fieldInfo = (window.allFields || []).find(f => f.name === colName);
+        selectedColsArray.forEach(fieldName => {
+            const fieldInfo = (window.allFields || []).find(f => f.name === fieldName);
             if (fieldInfo && fieldInfo.label) {
-                fieldLabels[colName] = fieldInfo.label;
+                fieldLabels[fieldName] = fieldInfo.label;
             }
         });
+        console.log('字段标签映射 fieldLabels:', fieldLabels);
 
         // 添加filterFields中的字段
         if (tableConfig.filterFields && Array.isArray(tableConfig.filterFields)) {
@@ -158,10 +202,11 @@ function getCurrentTableConfig() {
             selectedDataSource: datasourceSelect.value || '',
             selectedTable: tableSelect.value || '',
             selectedSchema: schemaSelect ? (schemaSelect.value || '') : '',
-            selectedCols: selectedColsArray,  // 保持为字符串数组
+            selectedCols: selectedColsArray,  // 使用从表格收集的字段数组
             fieldLabels: fieldLabels  // 单独保存label映射
         };
-        // console.log('保存明细报表配置:', tableConfig.detailReportConfig);
+        console.log('最终保存的 detailReportConfig:', tableConfig.detailReportConfig);
+        console.log('=== 保存明细报表配置结束 ===');
     }
 
     // 保存所有单元格配置（通过引用保存）
