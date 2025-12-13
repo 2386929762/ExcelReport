@@ -59,9 +59,9 @@ function ensureRowExists(table, rowIndex) {
     return newRow;
 }
 // 添加字段到表格区域
-function addFieldToTable(cell, fieldName, tableName) {
-    console.log('添加字段到表格:', { fieldName, tableName, cell });
-    
+function addFieldToTable(cell, fieldName, tableName, fieldLabel) {
+    console.log('添加字段到表格:', { fieldName, tableName, fieldLabel, cell });
+
     // 对于动态加载的表,tableDataMap可能不存在,这是正常的
     const tableData = window.tableDataMap ? window.tableDataMap[tableName] : null;
     if (!tableData) {
@@ -74,10 +74,10 @@ function addFieldToTable(cell, fieldName, tableName) {
         console.warn('不能在行号列添加字段');
         return;
     }
-    
+
     const table = cell.closest('table');
     const colIndex = Array.from(cell.parentElement.cells).indexOf(cell);
-    
+
     // 检查该列是否已经存在字段
     for (let i = 0; i < table.rows.length; i++) {
         const row = table.rows[i];
@@ -95,11 +95,11 @@ function addFieldToTable(cell, fieldName, tableName) {
             }
         }
     }
-    
+
     // 检查表格中是否已有来自不同表的字段
     let existingTableName = null;
     let hasFields = false;
-    
+
     // 遍历表格查找已存在的字段
     for (let i = 0; i < table.rows.length; i++) {
         const row = table.rows[i];
@@ -126,8 +126,9 @@ function addFieldToTable(cell, fieldName, tableName) {
         }
     }
 
-    // 设置字段名称,使用{fieldName}格式显示
-    cell.textContent = '{' + fieldName + '}';
+    // 优先显示字段中文名，没有的话才显示字段名
+    const displayName = fieldLabel || fieldName;
+    cell.textContent = '{' + displayName + '}';
     // 移除样式设置
     cell.style.fontWeight = 'bold';
     cell.style.backgroundColor = '#e0e0e0';
@@ -135,7 +136,11 @@ function addFieldToTable(cell, fieldName, tableName) {
     cell.dataset.type = 'field';
     cell.dataset.name = fieldName;
     cell.dataset.table = tableName;
-    
+    // 保存字段中文名到dataset
+    if (fieldLabel) {
+        cell.dataset.fieldLabel = fieldLabel;
+    }
+
     // 记录选中的字段到全局数组
     if (!window.selectedCols) {
         window.selectedCols = [];
@@ -144,7 +149,7 @@ function addFieldToTable(cell, fieldName, tableName) {
         window.selectedCols.push(fieldName);
         console.log('已添加字段到selectedCols:', fieldName, '当前字段列表:', window.selectedCols);
     }
-    
+
     // 添加内容变化监听器
     addContentChangeListener(cell);
 
@@ -163,19 +168,19 @@ function addContentChangeListener(cell) {
     if (cell.hasOwnProperty('_contentChangeListener')) {
         return;
     }
-    
+
     // 使用input事件监听内容变化
-    const listener = function() {
+    const listener = function () {
         // 如果单元格内容被清空，移除相关元数据
         if (!this.textContent.trim()) {
             const fieldName = this.dataset.name;
-            
+
             delete this.dataset.type;
             delete this.dataset.name;
             delete this.dataset.table;
             this.style.fontWeight = '';
             this.style.backgroundColor = '';
-            
+
             // 从selectedCols中移除该字段
             if (fieldName && window.selectedCols) {
                 const index = window.selectedCols.indexOf(fieldName);
@@ -185,13 +190,13 @@ function addContentChangeListener(cell) {
                 }
             }
         }
-        
+
         // 检查是否是字段单元格，如果是，则更新表格字段
         if (this.dataset.table && this.dataset.type === 'field') {
             updateTableFields(this.dataset.table, this.closest('table'));
         }
     };
-    
+
     cell.addEventListener('input', listener);
     cell._contentChangeListener = listener; // 标记已添加监听器
 }
@@ -199,7 +204,7 @@ function addContentChangeListener(cell) {
 // 更新表格数据中的fields数组，使其与设计表格中的字段保持一致
 function updateTableFields(tableName, designTable) {
     if (!window.tableDataMap[tableName]) return;
-    
+
     // 查找字段行
     let fieldRow = null;
     for (let i = 0; i < designTable.rows.length; i++) {
@@ -213,9 +218,9 @@ function updateTableFields(tableName, designTable) {
         }
         if (fieldRow) break;
     }
-    
+
     if (!fieldRow) return;
-    
+
     // 收集所有有效的字段名
     const newFields = [];
     for (let j = 1; j < fieldRow.cells.length; j++) {
@@ -224,7 +229,7 @@ function updateTableFields(tableName, designTable) {
             newFields.push(cell.dataset.name);
         }
     }
-    
+
     // 更新window.tableDataMap中的fields数组
     window.tableDataMap[tableName].fields = newFields;
     console.log('已更新表格', tableName, '的字段列表:', newFields);
@@ -249,7 +254,8 @@ function initDragAndDrop() {
                 type: 'field',
                 name: item.dataset.field || item.textContent.trim(),
                 tableName: item.dataset.table || '未知表格',
-                fieldName: item.dataset.field || item.textContent.trim()
+                fieldName: item.dataset.field || item.textContent.trim(),
+                fieldLabel: item.dataset.fieldLabel || ''
             };
             console.log('字段拖拽数据:', dragData);
 
@@ -314,18 +320,20 @@ function initDragAndDrop() {
                             const fieldName = dragElement.dataset.field;
                             if (tableName && fieldName) {
                                 // 直接使用检测到的字段信息创建数据对象
+                                const fieldLabel = dragElement.dataset.fieldLabel || '';
                                 const fallbackData = {
                                     type: 'field',
                                     name: fieldName,
                                     tableName: tableName,
-                                    fieldName: fieldName
+                                    fieldName: fieldName,
+                                    fieldLabel: fieldLabel
                                 };
                                 console.log('使用回退数据:', fallbackData);
 
                                 // 处理字段类型的拖拽
                                 if (fallbackData.type === 'field' && fallbackData.fieldName && fallbackData.tableName) {
                                     console.log('回退处理字段:', fallbackData.fieldName, 'from', fallbackData.tableName);
-                                    addFieldToTable(cell, fallbackData.fieldName, fallbackData.tableName);
+                                    addFieldToTable(cell, fallbackData.fieldName, fallbackData.tableName, fallbackData.fieldLabel);
                                 }
                                 return;
                             }
@@ -347,8 +355,8 @@ function initDragAndDrop() {
 
                 // 只处理字段类型的拖拽，不允许整个表格拖拽
                 if (data.type === 'field' && data.fieldName && data.tableName) {
-                    console.log('执行添加字段:', data.fieldName, '表格:', data.tableName);
-                    addFieldToTable(cell, data.fieldName, data.tableName);
+                    console.log('执行添加字段:', data.fieldName, '表格:', data.tableName, '中文名:', data.fieldLabel);
+                    addFieldToTable(cell, data.fieldName, data.tableName, data.fieldLabel);
                 }
                 else {
                     console.warn('只支持字段类型的拖拽');
@@ -373,7 +381,7 @@ document.addEventListener('DOMContentLoaded', initDragAndDrop);
 function showColumnConflictWarning(existingFieldName, newFieldName) {
     // 创建警告容器
     let warningElement = document.getElementById('column-conflict-warning');
-    
+
     // 如果警告元素不存在，则创建它
     if (!warningElement) {
         warningElement = document.createElement('div');
@@ -391,7 +399,7 @@ function showColumnConflictWarning(existingFieldName, newFieldName) {
         warningElement.style.maxWidth = '80%';
         warningElement.style.textAlign = 'center';
         warningElement.style.fontSize = '14px';
-        
+
         // 添加关闭按钮
         const closeButton = document.createElement('span');
         closeButton.innerHTML = '&times;';
@@ -401,27 +409,27 @@ function showColumnConflictWarning(existingFieldName, newFieldName) {
         closeButton.style.fontSize = '18px';
         closeButton.style.cursor = 'pointer';
         closeButton.style.fontWeight = 'bold';
-        
-        closeButton.addEventListener('click', function() {
+
+        closeButton.addEventListener('click', function () {
             warningElement.style.opacity = '0';
             setTimeout(() => {
                 warningElement.remove();
             }, 300);
         });
-        
+
         warningElement.appendChild(closeButton);
         document.body.appendChild(warningElement);
     }
-    
+
     // 设置警告消息
     warningElement.innerHTML = `<span style="position: absolute; top: 5px; right: 10px; font-size: 18px; cursor: pointer; font-weight: bold;" onclick="document.getElementById('column-conflict-warning').remove()">&times;</span>
     该列已存在字段: "${existingFieldName}"，不能添加新字段 "${newFieldName}"<br>
     请先删除该列的现有字段，然后再添加新字段`;
-    
+
     // 显示警告
     warningElement.style.opacity = '1';
     warningElement.style.transition = 'opacity 0.3s ease';
-    
+
     // 3秒后自动消失
     setTimeout(() => {
         warningElement.style.opacity = '0';
@@ -437,7 +445,7 @@ function showColumnConflictWarning(existingFieldName, newFieldName) {
 function showTableConflictWarning(existingTableName, newTableName) {
     // 创建警告容器
     let warningElement = document.getElementById('table-conflict-warning');
-    
+
     // 如果警告元素不存在，则创建它
     if (!warningElement) {
         warningElement = document.createElement('div');
@@ -455,7 +463,7 @@ function showTableConflictWarning(existingTableName, newTableName) {
         warningElement.style.maxWidth = '80%';
         warningElement.style.textAlign = 'center';
         warningElement.style.fontSize = '14px';
-        
+
         // 添加关闭按钮
         const closeButton = document.createElement('span');
         closeButton.innerHTML = '&times;';
@@ -465,27 +473,27 @@ function showTableConflictWarning(existingTableName, newTableName) {
         closeButton.style.fontSize = '18px';
         closeButton.style.cursor = 'pointer';
         closeButton.style.fontWeight = 'bold';
-        
-        closeButton.addEventListener('click', function() {
+
+        closeButton.addEventListener('click', function () {
             warningElement.style.opacity = '0';
             setTimeout(() => {
                 warningElement.remove();
             }, 300);
         });
-        
+
         warningElement.appendChild(closeButton);
         document.body.appendChild(warningElement);
     }
-    
+
     // 设置警告消息
     warningElement.innerHTML = `<span style="position: absolute; top: 5px; right: 10px; font-size: 18px; cursor: pointer; font-weight: bold;" onclick="document.getElementById('table-conflict-warning').remove()">&times;</span>
     表格中已有来自"${existingTableName}"的数据，不能添加来自"${newTableName}"的字段<br>
     请先删除所有"${existingTableName}"的字段，然后再添加其他表的字段`;
-    
+
     // 显示警告
     warningElement.style.opacity = '1';
     warningElement.style.transition = 'opacity 0.3s ease';
-    
+
     // 3秒后自动消失
     setTimeout(() => {
         warningElement.style.opacity = '0';

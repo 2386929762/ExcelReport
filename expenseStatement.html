@@ -625,7 +625,7 @@
                     tables.forEach(table => {
                         const option = document.createElement('option');
                         const tableName = table['表名'];
-                        const displayName = table['中文名'] ? table['中文名'] + ' (' + tableName + ')' : tableName;
+                        const displayName = table['中文名'] || tableName;
                         option.value = tableName;
                         option.textContent = displayName;
                         option.dataset.tableData = JSON.stringify(table);
@@ -753,6 +753,7 @@
                 fieldItem.draggable = true;
                 fieldItem.setAttribute('data-table', tableName);
                 fieldItem.setAttribute('data-field', field['字段名']);
+                fieldItem.setAttribute('data-field-label', field['字段中文名'] || field['字段名']);
                 fieldItem.style.padding = '8px 12px';
                 fieldItem.style.cursor = 'move';
                 fieldItem.style.borderBottom = '1px solid #eee';
