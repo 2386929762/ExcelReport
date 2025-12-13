@@ -5,7 +5,7 @@
  * 将保存和导入功能绑定到对应的按钮
  */
 function initToolbarActions() {
-    console.log('开始初始化工具栏动作');
+    // console.log('开始初始化工具栏动作');
 
     // 等待DOM加载完成
     if (document.readyState === 'loading') {
@@ -21,19 +21,19 @@ function initToolbarActions() {
  * 绑定工具栏按钮事件
  */
 function bindToolbarButtons() {
-    console.log('绑定工具栏按钮事件');
+    // console.log('绑定工具栏按钮事件');
 
     // 由于保存、导入、清空按钮在HTML中被注释掉了，
     // 这里不再绑定任何事件，避免干扰格式化按钮
 
-    console.log('工具栏按钮绑定已禁用（因为对应按钮已被注释）');
+    // console.log('工具栏按钮绑定已禁用（因为对应按钮已被注释）');
 }
 
 /**
  * 处理保存配置按钮点击事件
  */
 async function handleSaveConfig() {
-    console.log('保存配置按钮被点击');
+    // console.log('保存配置按钮被点击');
 
     try {
         // 首先确保当前选中单元格的配置已保存
@@ -48,7 +48,7 @@ async function handleSaveConfig() {
         }
 
         const nodeInfo = window.currentNodeInfo;
-        console.log('准备保存，节点信息:', nodeInfo);
+        // console.log('准备保存，节点信息:', nodeInfo);
 
         // 验证必要字段
         if (!nodeInfo.nodeName) {
@@ -80,7 +80,7 @@ async function handleSaveConfig() {
 
         if (result.state === '200') {
             // 成功情况
-            console.log('接口调用成功，返回数据:', result);
+            // console.log('接口调用成功，返回数据:', result);
 
             // 构建成功消息
             let successMessage = '配置保存成功！';
@@ -123,7 +123,7 @@ async function callBackendSaveAPI(nodeInfo) {
         const sdk = await window.initializeSDK();
 
         // 从配置中获取保存按钮配置
-        const saveButtonConfig = window.getSaveButtonConfig?.() || { panelCode: 'IML_00001', buttonName: '保存' };
+        const saveButtonConfig = window.SDK_CONFIG_SETTINGS.saveButton;
 
         // 构建表单数据
         const formData = {
@@ -141,14 +141,14 @@ async function callBackendSaveAPI(nodeInfo) {
         if (nodeInfo.config) {
             // 如果config是对象，转换为JSON字符串；如果已是字符串则直接使用
             formData["json"] = typeof nodeInfo.config === 'string' ? nodeInfo.config : JSON.stringify(nodeInfo.config);
-            console.log('添加配置JSON:', formData["json"]);
+            // console.log('添加配置JSON:', formData["json"]);
         }
 
-        console.log('调用SDK保存接口，参数:', {
-            panelCode: saveButtonConfig.panelCode,
-            buttonName: saveButtonConfig.buttonName,
-            formData: formData
-        });
+        // console.log('调用SDK保存接口，参数:', {
+        //     panelCode: saveButtonConfig.panelCode,
+        //     buttonName: saveButtonConfig.buttonName,
+        //     formData: formData
+        // });
 
         // 调用SDK接口 - 使用正确的方法名callButton，参数从配置文件读取
         const result = await sdk.api.callButton({
@@ -216,7 +216,7 @@ function showNotification(title, message, type = 'info') {
     if (type === 'error') {
         console.error(`${title}: ${message}`);
     } else if (type === 'success') {
-        console.log(`${title}: ${message}`);
+        // console.log(`${title}: ${message}`);
     } else {
         console.info(`${title}: ${message}`);
     }
@@ -226,7 +226,7 @@ function showNotification(title, message, type = 'info') {
  * 处理导入配置按钮点击事件
  */
 function handleImportConfig() {
-    console.log('导入配置按钮被点击');
+    // console.log('导入配置按钮被点击');
 
     try {
         // 导入配置，并在成功后应用
@@ -244,7 +244,7 @@ function handleImportConfig() {
  * 处理清空配置按钮点击事件
  */
 function handleClearConfig() {
-    console.log('清空配置按钮被点击');
+    // console.log('清空配置按钮被点击');
 
     // 确认对话框，防止误操作
     if (!confirm('确定要清空所有表格配置并刷新页面吗？此操作不可恢复！')) {
@@ -255,12 +255,12 @@ function handleClearConfig() {
         // 清空全局单元格配置对象
         if (window.cellConfigurations) {
             window.cellConfigurations = {};
-            console.log('全局单元格配置已清空');
+            // console.log('全局单元格配置已清空');
         }
 
         // 设置全局标志，表示已执行清空操作
         window.configsCleared = true;
-        console.log('已设置配置清空标志');
+        // console.log('已设置配置清空标志');
 
         // 更彻底地清除所有可能的配置项
         // 1. 清除localStorage中的所有配置
@@ -277,7 +277,7 @@ function handleClearConfig() {
 
         allLocalStorageKeys.forEach(key => {
             localStorage.removeItem(key);
-            console.log(`已删除localStorage配置: ${key}`);
+            // console.log(`已删除localStorage配置: ${key}`);
         });
 
         // 2. 清除sessionStorage中的所有配置
@@ -295,7 +295,7 @@ function handleClearConfig() {
 
             allSessionStorageKeys.forEach(key => {
                 sessionStorage.removeItem(key);
-                console.log(`已删除sessionStorage配置: ${key}`);
+                // console.log(`已删除sessionStorage配置: ${key}`);
             });
         } catch (e) {
             console.error('清除会话存储时出错:', e);
@@ -317,7 +317,7 @@ function handleClearConfig() {
         });
 
         // 5. 最后，强制刷新页面以确保所有配置都被清除
-        console.log('准备刷新页面以彻底清除所有配置');
+        // console.log('准备刷新页面以彻底清除所有配置');
         alert('所有配置已成功清空，页面将刷新以确保彻底清除！');
         location.reload(true); // 使用true参数强制从服务器重新加载页面，不使用缓存
 

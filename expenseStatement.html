@@ -558,13 +558,7 @@
         // 加载数据源列表
         async function loadDataSources() {
             try {
-                if (!sdk) {
-                    sdk = await window.initializeSDK();
-                    if (!initialized) {
-                        console.error('SDK初始化失败，无法加载数据源');
-                        return;
-                    }
-                }
+                sdk = await window.initializeSDK();
 
                 console.log('开始查询数据源列表...');
                 const params = {

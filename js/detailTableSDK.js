@@ -227,7 +227,7 @@ async function loadDetailConfigFromSDK(nodeCode) {
 
     try {
         const params = {
-            panelCode: window.getSaveButtonConfig().panelCode,
+            panelCode: window.SDK_CONFIG_SETTINGS.saveButton.panelCode,
             condition: { code: nodeCode }
         };
 
@@ -279,7 +279,7 @@ async function saveDetailConfigToSDK(nodeCode, config) {
         const jsonString = JSON.stringify(config);
 
         const params = {
-            panelCode: window.getSaveButtonConfig().panelCode,
+            panelCode: window.SDK_CONFIG_SETTINGS.saveButton.panelCode,
             condition: { code: nodeCode },
             data: {
                 code: nodeCode,

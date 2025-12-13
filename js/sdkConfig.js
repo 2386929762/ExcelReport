@@ -3,7 +3,8 @@
  * 集中管理所有SDK相关的配置参数，包括SDK脚本URL和API基础地址
  */
 
-const SDK_CONFIG_SETTINGS = {
+// SDK配置对象（全局暴露）
+window.SDK_CONFIG_SETTINGS = {
     // SDK API基础地址配置
     apiBaseUrl: 'https://demo.kwaidoo.com/zbyth/process',
 
@@ -15,9 +16,6 @@ const SDK_CONFIG_SETTINGS = {
         username: 'admin',
         password: '123456',
     },
-
-    // SDK面板代码
-    panelCode: 'BDYTH_IML_00001',
 
     // SDK保存按钮配置
     saveButton: {
@@ -46,21 +44,21 @@ window.initializeSDK = async function () {
             throw new Error('PanelXSdk未加载，请确保SDK脚本已正确加载');
         }
 
-        console.log('正在初始化SDK...');
+        // console.log('正在初始化SDK...');
 
         // 创建SDK实例
         window.sdkInstance = new PanelXSdk({
-            devDefaultBaseUrl: SDK_CONFIG_SETTINGS.apiBaseUrl,
-            busDomainCode: SDK_CONFIG_SETTINGS.busDomainCode
+            devDefaultBaseUrl: window.SDK_CONFIG_SETTINGS.apiBaseUrl,
+            busDomainCode: window.SDK_CONFIG_SETTINGS.busDomainCode
         });
 
         // 执行登录
         await window.sdkInstance.user.login({
-            userName: SDK_CONFIG_SETTINGS.credentials.username,
-            password: SDK_CONFIG_SETTINGS.credentials.password
+            userName: window.SDK_CONFIG_SETTINGS.credentials.username,
+            password: window.SDK_CONFIG_SETTINGS.credentials.password
         });
 
-        console.log('SDK初始化并登录成功');
+        // console.log('SDK初始化并登录成功');
         return window.sdkInstance;
     } catch (error) {
         console.error('SDK初始化失败:', error);
@@ -69,12 +67,4 @@ window.initializeSDK = async function () {
     }
 };
 
-/**
- * 获取保存按钮配置
- * @returns {Object} 保存按钮配置对象
- */
-window.getSaveButtonConfig = function () {
-    return SDK_CONFIG_SETTINGS.saveButton;
-};
-
-console.log('SDK配置管理模块已加载');
+// console.log('SDK配置管理模块已加载');

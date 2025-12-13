@@ -31,7 +31,7 @@ window.cellConfigurations = cellConfigurations;
 
 // 加载所有单元格配置的函数
 function loadAllCellConfigurations() {
-    console.log('开始加载所有单元格配置...');
+    // console.log('开始加载所有单元格配置...');
     try {
         // 遍历localStorage中的所有项目
         for (let i = 0; i < localStorage.length; i++) {
@@ -43,11 +43,11 @@ function loadAllCellConfigurations() {
                 if (storedConfig) {
                     const config = JSON.parse(storedConfig);
                     cellConfigurations[cellReference] = config;
-                    console.log(`加载单元格配置: ${cellReference}`, config);
+                    // console.log(`加载单元格配置: ${cellReference}`, config);
                 }
             }
         }
-        console.log('所有单元格配置加载完成，共加载', Object.keys(cellConfigurations).length, '个配置');
+        // console.log('所有单元格配置加载完成，共加载', Object.keys(cellConfigurations).length, '个配置');
     } catch (error) {
         console.error('加载单元格配置时出错:', error);
     }
@@ -60,7 +60,7 @@ cells.forEach(cell => {
     cell.addEventListener('click', () => {
         // 自动保存当前选中单元格的配置（如果有）
         if (currentSelectedCell && currentSelectedCell !== cell) {
-            console.log('自动保存前一个单元格配置');
+            // console.log('自动保存前一个单元格配置');
             saveCellConfiguration();
         }
 
@@ -172,39 +172,39 @@ function formatText(formatType) {
 
 // 为格式化按钮添加事件监听器
 document.addEventListener('DOMContentLoaded', function () {
-    console.log('expenseStatement.js: DOMContentLoaded - 开始绑定格式化按钮');
+    // console.log('expenseStatement.js: DOMContentLoaded - 开始绑定格式化按钮');
 
     // 加粗按钮
     const boldBtn = document.getElementById('bold-btn');
-    console.log('找到加粗按钮:', boldBtn);
+    // console.log('找到加粗按钮:', boldBtn);
     if (boldBtn) {
         boldBtn.addEventListener('click', function () {
-            console.log('加粗按钮被点击');
+            // console.log('加粗按钮被点击');
             formatText('bold');
         });
-        console.log('加粗按钮事件已绑定');
+        // console.log('加粗按钮事件已绑定');
     }
 
     // 斜体按钮
     const italicBtn = document.getElementById('italic-btn');
-    console.log('找到斜体按钮:', italicBtn);
+    // console.log('找到斜体按钮:', italicBtn);
     if (italicBtn) {
         italicBtn.addEventListener('click', function () {
-            console.log('斜体按钮被点击');
+            // console.log('斜体按钮被点击');
             formatText('italic');
         });
-        console.log('斜体按钮事件已绑定');
+        // console.log('斜体按钮事件已绑定');
     }
 
     // 下划线按钮
     const underlineBtn = document.getElementById('underline-btn');
-    console.log('找到下划线按钮:', underlineBtn);
+    // console.log('找到下划线按钮:', underlineBtn);
     if (underlineBtn) {
         underlineBtn.addEventListener('click', function () {
-            console.log('下划线按钮被点击');
+            // console.log('下划线按钮被点击');
             formatText('underline');
         });
-        console.log('下划线按钮事件已绑定');
+        // console.log('下划线按钮事件已绑定');
     }
 
     // 下拉菜单交互
@@ -300,25 +300,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // 设置下拉菜单功能
 function setupDropdownMenu(buttonId, menuId) {
-    console.log(`setupDropdownMenu 调用: buttonId=${buttonId}, menuId=${menuId}`);
+    // console.log(`setupDropdownMenu 调用: buttonId=${buttonId}, menuId=${menuId}`);
     const button = document.getElementById(buttonId);
     const menu = document.getElementById(menuId);
 
-    console.log(`找到按钮:`, button);
-    console.log(`找到菜单:`, menu);
+    // console.log(`找到按钮:`, button);
+    // console.log(`找到菜单:`, menu);
 
     if (!button || !menu) {
-        console.log(`按钮或菜单未找到，跳过设置`);
+        // console.log(`按钮或菜单未找到，跳过设置`);
         return;
     }
 
     // 点击按钮切换下拉菜单
     button.addEventListener('click', function (e) {
-        console.log(`${buttonId} 按钮被点击`);
+        // console.log(`${buttonId} 按钮被点击`);
         e.stopPropagation();
         toggleDropdown(menuId);
     });
-    console.log(`${buttonId} 事件监听器已添加`);
+    // console.log(`${buttonId} 事件监听器已添加`);
 
     // 阻止下拉菜单内部点击事件冒泡
     menu.addEventListener('click', function (e) {
@@ -527,7 +527,7 @@ function initCellInfoElements() {
         Object.values(cellInfoElements).forEach(element => {
             if (element) {
                 element.addEventListener('blur', function () {
-                    console.log('配置项失焦，自动保存配置');
+                    // console.log('配置项失焦，自动保存配置');
                     saveCellConfiguration();
                 });
             }
@@ -546,7 +546,7 @@ function updateCellInfo(cell) {
     const colIndex = Array.from(cell.parentElement.cells).indexOf(cell);
     const colLetter = String.fromCharCode(64 + colIndex); // A, B, C...
     const cellReference = `${colLetter}${rowIndex}`;
-    console.log('单元格引用:', cellReference);
+    // console.log('单元格引用:', cellReference);
 
     // 获取单元格内容和元数据
     const content = cell.textContent;
@@ -590,7 +590,7 @@ function updateCellInfo(cell) {
         const storedConfig = localStorage.getItem('cellConfig_' + cellReference);
         if (storedConfig) {
             configFromStorage = JSON.parse(storedConfig);
-            console.log('从localStorage恢复配置:', configFromStorage);
+            // console.log('从localStorage恢复配置:', configFromStorage);
         }
     } catch (e) {
         console.error('解析localStorage配置失败:', e);
@@ -629,7 +629,7 @@ function updateCellInfo(cell) {
 
     // 应用已保存的配置到右侧面板
     const config = cellConfigurations[cellReference];
-    console.log('恢复配置:', cellReference, config);
+    // console.log('恢复配置:', cellReference, config);
 
     // 应用基本配置
     if (cellUnit) cellUnit.value = config.unit || '';
@@ -641,7 +641,7 @@ function updateCellInfo(cell) {
 
 // 保存单元格配置（增强版本）
 function saveCellConfiguration(cellReference) {
-    console.log('开始保存单元格配置');
+    // console.log('开始保存单元格配置');
 
     // 如果没有提供单元格引用，从当前选中的单元格获取
     if (!cellReference && currentSelectedCell) {
@@ -649,7 +649,7 @@ function saveCellConfiguration(cellReference) {
         const colIndex = Array.from(currentSelectedCell.parentElement.cells).indexOf(currentSelectedCell);
         const colLetter = String.fromCharCode(64 + colIndex);
         cellReference = `${colLetter}${rowIndex}`;
-        console.log('从currentSelectedCell获取引用:', cellReference);
+        // console.log('从currentSelectedCell获取引用:', cellReference);
     }
 
 
@@ -710,12 +710,12 @@ function saveCellConfiguration(cellReference) {
     // 为了测试和持久化，也保存到localStorage
     try {
         localStorage.setItem('cellConfig_' + cellReference, JSON.stringify(cellConfigurations[cellReference]));
-        console.log('配置已保存到localStorage');
+        // console.log('配置已保存到localStorage');
     } catch (e) {
         console.error('保存到localStorage失败:', e);
     }
 
-    console.log('保存配置:', cellReference, cellConfigurations[cellReference]);
+    // console.log('保存配置:', cellReference, cellConfigurations[cellReference]);
 }
 
 // 显示自动消失的通知
@@ -789,7 +789,7 @@ async function callBackendSaveAPI(nodeInfo) {
         const sdk = await window.initializeSDK();
 
         // 从配置中获取保存按钮配置
-        const saveButtonConfig = window.getSaveButtonConfig();
+        const saveButtonConfig = window.SDK_CONFIG_SETTINGS.saveButton;
 
         // 构建表单数据
         const formData = {
@@ -806,14 +806,14 @@ async function callBackendSaveAPI(nodeInfo) {
         // 添加当前表格的config JSON
         if (nodeInfo.config) {
             formData["json"] = typeof nodeInfo.config === 'string' ? nodeInfo.config : JSON.stringify(nodeInfo.config);
-            console.log('添加配置JSON:', formData["json"]);
+            // console.log('添加配置JSON:', formData["json"]);
         }
 
-        console.log('调用SDK保存接口，参数:', {
-            panelCode: saveButtonConfig.panelCode,
-            buttonName: saveButtonConfig.buttonName,
-            formData: formData
-        });
+        // console.log('调用SDK保存接口，参数:', {
+        //     panelCode: saveButtonConfig.panelCode,
+        //     buttonName: saveButtonConfig.buttonName,
+        //     formData: formData
+        // });
 
         // 调用SDK接口
         const result = await sdk.api.callButton({
@@ -833,18 +833,18 @@ async function callBackendSaveAPI(nodeInfo) {
 if (typeof saveButtonBound === 'undefined') {
     window.saveButtonBound = true;
     window.addEventListener('DOMContentLoaded', function () {
-        console.log('尝试绑定保存按钮事件');
+        // console.log('尝试绑定保存按钮事件');
         // 为底部保存按钮绑定事件监听器（使用有效的选择器）
         const saveButton = document.querySelector('.bottom-actions .save-button') ||
             document.querySelector('.save-button');
 
         if (saveButton) {
-            console.log('成功绑定保存按钮事件');
+            // console.log('成功绑定保存按钮事件');
             // 先移除可能存在的事件监听器，避免重复绑定
             saveButton.removeEventListener('click', handleSaveClick);
 
             function handleSaveClick() {
-                console.log('保存按钮被点击，执行配置保存');
+                // console.log('保存按钮被点击，执行配置保存');
 
                 try {
                     // 确保当前选中单元格的配置已保存
@@ -880,7 +880,7 @@ if (typeof saveButtonBound === 'undefined') {
                     callBackendSaveAPI(nodeInfoToSave).then(result => {
                         if (result && result.state === '200') {
                             showNotification('保存成功！', 'success');
-                            console.log('配置保存成功');
+                            // console.log('配置保存成功');
                         } else {
                             showNotification('保存失败：' + (result?.message || '未知错误'), 'error');
                             console.error('配置保存失败:', result);
@@ -915,7 +915,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 页面卸载时自动保存当前配置，防止配置丢失
     window.addEventListener('beforeunload', () => {
         if (currentSelectedCell) {
-            console.log('页面卸载前自动保存当前单元格配置');
+            // console.log('页面卸载前自动保存当前单元格配置');
             saveCellConfiguration();
         }
     });
@@ -984,7 +984,7 @@ function initializeTable(rows = 20, cols = 20) {
             cell.addEventListener('click', function () {
                 // 自动保存当前选中单元格的配置（如果有）
                 if (currentSelectedCell && currentSelectedCell !== this) {
-                    console.log('自动保存前一个单元格配置');
+                    // console.log('自动保存前一个单元格配置');
                     saveCellConfiguration();
                 }
 
@@ -1015,7 +1015,7 @@ function initializeTable(rows = 20, cols = 20) {
         }
     }
 
-    console.log(`表格初始化完成: ${rows}行 x ${cols}列`);
+    // console.log(`表格初始化完成: ${rows}行 x ${cols}列`);
 }
 
 // 暴露函数到全局，供其他模块使用
@@ -1079,7 +1079,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             }
 
-            console.log('已添加新行');
+            // console.log('已添加新行');
         });
     }
 
@@ -1138,7 +1138,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             }
 
-            console.log('已添加新列:', newColLabel);
+            // console.log('已添加新列:', newColLabel);
         });
     }
 });
