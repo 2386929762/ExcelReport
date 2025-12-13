@@ -68,7 +68,8 @@
         // 兼容不同的字段名称格式
         const tableName = field.tableName || field.table;
         const fieldName = field.fieldName || field.field || field.name;
-        const displayName = field.displayName || fieldName;
+        // 优先使用 fieldLabel（已包含字段中文名），然后是 displayName，最后才是 fieldName
+        const displayName = field.fieldLabel || field.displayName || fieldName;
 
         if (!tableName || !fieldName) {
             console.error('字段数据不完整:', field);
