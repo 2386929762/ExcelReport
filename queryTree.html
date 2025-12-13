@@ -320,15 +320,31 @@
                 // --- Iframe Communication ---
                 const sendMessageToIframe = (node) => {
                     const iframe = iframeRef.value;
+                    console.log('sendMessageToIframe 被调用, node:', node, 'node.json:', node?.json);
                     if (iframe && iframe.contentWindow && node) {
                         let configData = {};
                         try {
-                            configData = typeof node.json === 'string' ? JSON.parse(node.json) : node.json;
+                            const parsed = typeof node.json === 'string' ? JSON.parse(node.json) : node.json;
+                            console.log('解析后的 parsed:', parsed, 'typeof:', typeof parsed);
+                            // 确保parsed是一个有效的对象，而不是null或其他类型
+                            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                                configData = parsed;
+                            } else {
+                                console.warn("节点JSON配置不是有效对象:", parsed);
+                                configData = {};
+                            }
                         } catch (e) {
                             console.error("Error parsing JSON config:", e);
+                            configData = {};
                         }
 
+                        console.log('在设置reportCode前, configData:', configData, 'typeof:', typeof configData);
+
                         // 将节点编号添加到配置中作为reportCode
+                        // 额外的安全检查
+                        if (!configData || typeof configData !== 'object') {
+                            configData = {};
+                        }
                         configData.reportCode = node['编号'];
 
                         console.log('通过postMessage发送配置数据给iframe:', configData);
@@ -372,13 +388,24 @@
                                 // 解析json配置
                                 let configData = {};
                                 try {
-                                    configData = typeof queryResult.json === 'string' ? JSON.parse(queryResult.json) : queryResult.json;
+                                    const parsed = typeof queryResult.json === 'string' ? JSON.parse(queryResult.json) : queryResult.json;
+                                    // 确保parsed是一个有效的对象，而不是null或其他类型
+                                    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                                        configData = parsed;
+                                    } else {
+                                        console.warn("解析的JSON配置不是有效对象:", parsed);
+                                        configData = {};
+                                    }
                                 } catch (e) {
                                     console.error("解析JSON配置失败:", e);
                                     configData = {};
                                 }
 
                                 // 将节点编号添加到配置中作为reportCode
+                                // 额外的安全检查
+                                if (!configData || typeof configData !== 'object') {
+                                    configData = {};
+                                }
                                 configData.reportCode = node['编号'];
 
                                 // 延迟发送消息到iframe，确保iframe已加载
