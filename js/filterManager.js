@@ -68,8 +68,19 @@
         // 兼容不同的字段名称格式
         const tableName = field.tableName || field.table;
         const fieldName = field.fieldName || field.field || field.name;
-        // 优先使用 fieldLabel（已包含字段中文名），然后是 displayName，最后才是 fieldName
-        const displayName = field.fieldLabel || field.displayName || fieldName;
+        
+        // 优先从 window.allFields 获取最新的中文名
+        let displayName = fieldName;
+        if (window.allFields && Array.isArray(window.allFields)) {
+            const fieldInfo = window.allFields.find(f => f.name === fieldName);
+            if (fieldInfo && fieldInfo.label) {
+                displayName = fieldInfo.label;
+            }
+        }
+        // 如果 window.allFields 中没有，使用传入的 fieldLabel 或 displayName
+        if (displayName === fieldName) {
+            displayName = field.fieldLabel || field.displayName || fieldName;
+        }
 
         if (!tableName || !fieldName) {
             console.error('字段数据不完整:', field);
@@ -82,7 +93,13 @@
             const existingTable = item.dataset.table;
             const existingField = item.dataset.field;
             if (existingTable === tableName && existingField === fieldName) {
-                // console.log('过滤字段已存在，不重复添加');
+                // 如果已存在，更新其显示名称
+                const labelSpan = item.querySelector('.field-label');
+                if (labelSpan && labelSpan.textContent !== displayName) {
+                    labelSpan.textContent = displayName;
+                    item.dataset.displayName = displayName;
+                    console.log(`更新过滤字段显示名: ${fieldName} -> ${displayName}`);
+                }
                 return;
             }
         }
@@ -145,7 +162,7 @@
     }
 
     // 加载已保存的过滤字段
-    function loadFilterFields() {
+    async function loadFilterFields() {
         if (typeof window.currentNodeInfo !== 'undefined' &&
             window.currentNodeInfo &&
             window.currentNodeInfo.config &&
@@ -154,8 +171,41 @@
             const filterFields = window.currentNodeInfo.config.filterFields;
             // console.log('加载已保存的过滤字段:', filterFields);
 
+            // 如果有表编号，先查询表结构获取字段中文名
+            let fieldNameToLabel = {};
+            if (window.currentNodeInfo.config.selectedTableCode && window.sdk) {
+                try {
+                    const params = {
+                        panelCode: 'IML_00003',
+                        condition: {
+                            code: window.currentNodeInfo.config.selectedTableCode
+                        }
+                    };
+                    const result = await window.sdk.api.queryFormData(params);
+                    if (result && result.state === '200' && result.data && result.data.list && result.data.list.length > 0) {
+                        const tableInfo = result.data.list[0];
+                        const fieldsStructure = tableInfo['表结构'];
+                        if (fieldsStructure && Array.isArray(fieldsStructure)) {
+                            fieldsStructure.forEach(fieldInfo => {
+                                if (fieldInfo['字段名'] && fieldInfo['字段中文名']) {
+                                    fieldNameToLabel[fieldInfo['字段名']] = fieldInfo['字段中文名'];
+                                }
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error('查询表结构失败:', error);
+                }
+            }
+
+            // 为每个字段添加displayName（从查询结果或使用字段名）
             filterFields.forEach(field => {
-                addFilterField(field);
+                const fieldWithLabel = {
+                    ...field,
+                    fieldLabel: fieldNameToLabel[field.field] || field.field,
+                    displayName: fieldNameToLabel[field.field] || field.displayName || field.field
+                };
+                addFilterField(fieldWithLabel);
             });
         }
     }
@@ -171,12 +221,46 @@
         items.forEach(item => {
             filterFields.push({
                 table: item.dataset.table,
-                field: item.dataset.field,
-                displayName: item.dataset.displayName
+                field: item.dataset.field
+                // 不保存displayName，中文名通过查询表结构动态获取
             });
         });
 
         return filterFields;
+    }
+
+    // 更新已有过滤字段的显示名称（使用 window.allFields 中的最新中文名）
+    function updateFilterFieldLabels() {
+        if (!window.allFields || !Array.isArray(window.allFields) || window.allFields.length === 0) {
+            console.log('window.allFields 为空，跳过更新过滤字段显示名');
+            return;
+        }
+
+        const container = document.getElementById('filter-fields-container');
+        if (!container) return;
+
+        const filterItems = container.querySelectorAll('.filter-field-item');
+        let updatedCount = 0;
+
+        filterItems.forEach(item => {
+            const fieldName = item.dataset.field;
+            if (fieldName) {
+                const fieldInfo = window.allFields.find(f => f.name === fieldName);
+                if (fieldInfo && fieldInfo.label) {
+                    const labelSpan = item.querySelector('.field-label');
+                    if (labelSpan && labelSpan.textContent !== fieldInfo.label) {
+                        labelSpan.textContent = fieldInfo.label;
+                        item.dataset.displayName = fieldInfo.label;
+                        updatedCount++;
+                        console.log(`更新过滤字段显示名: ${fieldName} -> ${fieldInfo.label}`);
+                    }
+                }
+            }
+        });
+
+        if (updatedCount > 0) {
+            console.log(`已更新 ${updatedCount} 个过滤字段的显示名`);
+        }
     }
 
     // 页面加载完成后初始化
@@ -191,7 +275,8 @@
         saveFilterFields: saveFilterFields,
         loadFilterFields: loadFilterFields,
         getFilterFields: getFilterFields,
-        addFilterField: addFilterField
+        addFilterField: addFilterField,
+        updateFilterFieldLabels: updateFilterFieldLabels
     };
 
 })();

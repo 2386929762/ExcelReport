@@ -172,41 +172,20 @@ function getCurrentTableConfig() {
         console.log('从表格收集到的字段（按列顺序）:', collectedFields);
         console.log('selectedColsArray:', selectedColsArray);
         console.log('window.selectedCols（旧值，仅供参考）:', window.selectedCols);
+        console.log('window.currentNodeInfo:', window.currentNodeInfo);
+        console.log('window.currentNodeInfo.config的完整内容:', JSON.stringify(window.currentNodeInfo?.config, null, 2));
+        console.log('window.currentNodeInfo?.config?.selectedTableCode:', window.currentNodeInfo?.config?.selectedTableCode);
 
-        // 单独保存字段的中文label映射（用于显示）
-        const fieldLabels = {};
-        // 添加selectedCols中的字段
-        selectedColsArray.forEach(fieldName => {
-            const fieldInfo = (window.allFields || []).find(f => f.name === fieldName);
-            if (fieldInfo && fieldInfo.label) {
-                fieldLabels[fieldName] = fieldInfo.label;
-            }
-        });
-        console.log('字段标签映射 fieldLabels:', fieldLabels);
-
-        // 添加filterFields中的字段
-        if (tableConfig.filterFields && Array.isArray(tableConfig.filterFields)) {
-            tableConfig.filterFields.forEach(filterField => {
-                const fieldName = filterField.field;
-                // 如果还没有添加过这个字段的label
-                if (fieldName && !fieldLabels[fieldName]) {
-                    const fieldInfo = (window.allFields || []).find(f => f.name === fieldName);
-                    if (fieldInfo && fieldInfo.label) {
-                        fieldLabels[fieldName] = fieldInfo.label;
-                    }
-                }
-            });
-        }
-
+        // 不再保存fieldLabels，中文名通过查询表结构动态获取
         tableConfig.detailReportConfig = {
             selectedDataSource: datasourceSelect.value || '',
-            selectedTable: tableSelect.value || '',
             selectedSchema: schemaSelect ? (schemaSelect.value || '') : '',
-            selectedCols: selectedColsArray,  // 使用从表格收集的字段数组
-            fieldLabels: fieldLabels  // 单独保存label映射
+            selectedTable: tableSelect.value || '',
+            selectedTableCode: window.currentNodeInfo?.config?.selectedTableCode || '',  // 保存表编号
+            selectedCols: selectedColsArray
         };
-        console.log('最终保存的 detailReportConfig:', tableConfig.detailReportConfig);
-        console.log('=== 保存明细报表配置结束 ===');
+
+        console.log('=== 保存的 detailReportConfig ===', tableConfig.detailReportConfig);
     }
 
     // 保存所有单元格配置（通过引用保存）
@@ -310,9 +289,16 @@ function getCurrentTableConfig() {
                 const colspan = parseInt(cell.getAttribute('colspan') || '1');
                 const rowspan = parseInt(cell.getAttribute('rowspan') || '1');
 
+                // 对于字段类型的单元格，value保存 {字段名} 而不是 {中文名}
+                let cellValue = cellContent.trim();
+                if (cell.dataset.type === 'field' && cell.dataset.name) {
+                    // 如果是字段单元格，保存格式为 {字段英文名}
+                    cellValue = `{${cell.dataset.name}}`;
+                }
+
                 // 只保存显式设置的样式，而不是计算后的样式
                 const cellData = {
-                    value: cellContent.trim(),
+                    value: cellValue,
                     type: cell.dataset.type || 'text',
                     rowIndex: rowIndex,
                     cellIndex: cellIndex,  // 保存实际的列索引
@@ -368,12 +354,12 @@ function getCurrentTableConfig() {
                     }
                 }
 
-                // 对于明细报表的字段单元格，保存字段信息
+                // 对于明细报表的字段单元格，只保存英文字段名
                 if (cellData.type === 'field' && cell.dataset.table && cell.dataset.name) {
                     cellData.data = {
                         table: cell.dataset.table,
-                        field: cell.dataset.name,
-                        displayName: cell.dataset.displayName || cell.dataset.name
+                        field: cell.dataset.name
+                        // 不保存displayName，中文名通过查询表结构动态获取
                     };
                 }
 
@@ -425,6 +411,7 @@ function applyTableConfig(config) {
             window.currentNodeInfo.config.selectedDataSource = config.detailReportConfig.selectedDataSource;
             window.currentNodeInfo.config.selectedTable = config.detailReportConfig.selectedTable;
             window.currentNodeInfo.config.selectedSchema = config.detailReportConfig.selectedSchema || '';
+            window.currentNodeInfo.config.selectedTableCode = config.detailReportConfig.selectedTableCode || '';
             window.currentNodeInfo.config.selectedCols = config.detailReportConfig.selectedCols || [];
             // 恢复选中的字段到全局变量
             window.selectedCols = config.detailReportConfig.selectedCols || [];
@@ -536,8 +523,12 @@ function applyTableConfig(config) {
                                         // 对于明细报表的字段单元格
                                         if (cellData.type === 'field') {
                                             if (cellData.data.table) cell.dataset.table = cellData.data.table;
-                                            if (cellData.data.field) cell.dataset.name = cellData.data.field;
-                                            if (cellData.data.displayName) cell.dataset.displayName = cellData.data.displayName;
+                                            if (cellData.data.field) {
+                                                cell.dataset.name = cellData.data.field;
+                                                // displayName 不从配置加载，将通过表结构查询动态获取
+                                                // 设置字段名作为临时displayName，后续会被实际中文名替换
+                                                cell.dataset.displayName = cellData.data.field;
+                                            }
                                         } else {
                                             // 其他类型的数据属性
                                             Object.keys(cellData.data).forEach(dataKey => {
@@ -626,13 +617,105 @@ function applyTableConfig(config) {
         }
 
         // 注意：不再重建表格DOM结构，但会应用配置到现有单元格
-        // console.log('表格配置已成功应用到DOM元素');
-        alert('表格配置已成功导入并应用到表格');
+        console.log('表格配置已成功应用到DOM元素');
+        
+        // 查询表结构信息，更新字段的displayName（中文名）
+        if (config.detailReportConfig && config.detailReportConfig.selectedTableCode) {
+            updateFieldDisplayNames(config.detailReportConfig.selectedTableCode);
+        }
+        
+        // alert('表格配置已成功导入并应用到表格');
         return true;
     } catch (error) {
         console.error('应用表格配置时出错:', error);
-        alert('导入配置失败：' + error.message);
+        // alert('导入配置失败：' + error.message);
         return false;
+    }
+}
+
+/**
+ * 根据表编号查询表结构，更新所有字段单元格的displayName（中文名）
+ */
+async function updateFieldDisplayNames(tableCode) {
+    console.log('开始更新字段中文名...');
+    
+    // 建立字段名到中文名的映射
+    const fieldNameToLabel = {};
+    
+    // 优先使用 window.allFields（左侧字段列表已经加载的数据）
+    if (window.allFields && Array.isArray(window.allFields) && window.allFields.length > 0) {
+        console.log('使用 window.allFields 更新字段中文名');
+        window.allFields.forEach(field => {
+            if (field.name && field.label) {
+                fieldNameToLabel[field.name] = field.label;
+            }
+        });
+        console.log('从 window.allFields 获取的字段映射:', fieldNameToLabel);
+    } 
+    // 如果 window.allFields 为空，尝试从表结构查询
+    else if (tableCode && window.sdk) {
+        try {
+            console.log('window.allFields 为空，查询表信息以更新字段中文名，表编号:', tableCode);
+            const params = {
+                panelCode: 'IML_00003',
+                condition: {
+                    code: tableCode
+                }
+            };
+
+            const result = await window.sdk.api.queryFormData(params);
+            
+            if (result && result.state === '200' && result.data && result.data.list && result.data.list.length > 0) {
+                const tableInfo = result.data.list[0];
+                const fieldsStructure = tableInfo['表结构'];
+                
+                if (fieldsStructure && Array.isArray(fieldsStructure)) {
+                    fieldsStructure.forEach(fieldInfo => {
+                        if (fieldInfo['字段名'] && fieldInfo['字段中文名']) {
+                            fieldNameToLabel[fieldInfo['字段名']] = fieldInfo['字段中文名'];
+                        }
+                    });
+                    console.log('从表结构查询获取的字段映射:', fieldNameToLabel);
+                }
+            }
+        } catch (error) {
+            console.error('查询表结构失败:', error);
+        }
+    } else {
+        console.warn('无法更新字段中文名：window.allFields 为空且未提供 tableCode 或 SDK 未初始化');
+        return;
+    }
+
+    if (Object.keys(fieldNameToLabel).length === 0) {
+        console.warn('没有找到字段映射，跳过更新');
+        return;
+    }
+
+    // 更新表格中所有字段单元格的displayName和textContent
+    const table = document.getElementById('design-table');
+    if (table) {
+        const cells = table.querySelectorAll('[data-type="field"]');
+        let updatedCount = 0;
+        
+        cells.forEach(cell => {
+            const fieldName = cell.dataset.name;
+            if (fieldName && fieldNameToLabel[fieldName]) {
+                const chineseName = fieldNameToLabel[fieldName];
+                cell.dataset.displayName = chineseName;
+                
+                // 如果单元格内容是{字段名}格式，更新为{中文名}
+                const cellText = cell.textContent.trim();
+                if (cellText.startsWith('{') && cellText.endsWith('}')) {
+                    cell.textContent = `{${chineseName}}`;
+                    updatedCount++;
+                    console.log(`更新字段显示名: ${fieldName} -> ${chineseName}`);
+                }
+            }
+        });
+
+        console.log(`已更新 ${updatedCount} 个字段单元格的中文名`);
+    } else {
+        console.warn('未找到表格元素 #design-table');
     }
 }
 

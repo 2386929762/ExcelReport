@@ -79,94 +79,150 @@
         <main class="flex-1 flex overflow-hidden">
 
             <aside
-                class="w-80 bg-white border-r border-gray-200 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-0">
+                class="w-64 bg-white border-r border-gray-200 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-0">
                 <div class="p-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">报表列表</span>
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">报表目录</span>
                     <button @click="refreshTree" :disabled="refreshLoading"
                         class="px-2 py-1 text-xs rounded border transition-colors flex items-center gap-1"
                         :class="refreshLoading ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:text-blue-600'"
                         title="刷新目录">
                         <i :class="refreshLoading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate-right'"></i>
-                        <span>{{ refreshLoading ? '刷新中' : '刷新' }}</span>
                     </button>
                 </div>
 
-                <div class="flex-1 overflow-y-auto p-2 relative">
-                    <template v-if="treeData.length > 0">
-                        <tree-node v-for="node in treeData" :key="node['编号']" :node="node" :selected-id="selectedNodeId"
-                            @select="handleSelect"></tree-node>
-                    </template>
+                <div class="flex-1 overflow-y-auto">
+                    <div v-if="allDirectories.length > 0" class="flex flex-col">
+                        <button v-for="dir in allDirectories" :key="dir['编号']"
+                            @click="switchDirectory(dir)"
+                            class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 transition-all text-left hover:bg-gray-50"
+                            :class="dir['编号'] === selectedDirId ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''">
+                            <i class="fa-regular fa-folder text-yellow-500 text-sm"></i>
+                            <span class="text-sm font-medium truncate flex-1" 
+                                :class="dir['编号'] === selectedDirId ? 'text-blue-700' : 'text-gray-700'">
+                                {{ dir['节点名'] }}
+                            </span>
+                            <span v-if="getDirectoryTabCount(dir['编号']) > 0" 
+                                class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                                {{ getDirectoryTabCount(dir['编号']) }}
+                            </span>
+                        </button>
+                    </div>
                     <div v-else class="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
                         <i class="fa-solid fa-folder-open text-3xl mb-2 opacity-50"></i>
-                        <p>暂无数据</p>
+                        <p>暂无目录</p>
                     </div>
                 </div>
             </aside>
 
-            <section class="flex-1 bg-gray-50 relative overflow-hidden flex flex-col">
+            <section class="flex-1 bg-white relative overflow-hidden flex flex-col">
 
-                <div v-if="!selectedNode"
-                    class="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
-                    <div
-                        class="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4 text-gray-400 animate-pulse">
-                        <i class="fa-solid fa-mouse-pointer text-4xl"></i>
-                    </div>
-                    <p class="text-lg font-medium text-gray-500">请选择左侧报表查看</p>
+                <!-- Tab标签栏 -->
+                <div class="flex items-center gap-1 px-2 py-2 border-b border-gray-200 bg-gray-50 overflow-x-auto shrink-0">
+                    <button v-for="tab in allTabs" :key="tab.id"
+                        @click="switchTab(tab.id)"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-t border transition-all text-sm whitespace-nowrap"
+                        :class="tab.id === currentActiveTab ? 'bg-white border-gray-200 border-b-white -mb-px text-gray-800 font-medium' : 'bg-gray-100 border-transparent text-gray-600 hover:bg-gray-200'">
+                        <i v-if="tab.isListTab" class="fa-solid fa-list text-xs"></i>
+                        <i v-else class="fa-regular fa-file-lines text-xs"></i>
+                        <span class="truncate max-w-[120px]">{{ tab.name }}</span>
+                        <i v-if="!tab.isListTab" @click.stop="closeTab(tab.id)" 
+                            class="fa-solid fa-xmark text-xs hover:text-red-600 hover:bg-red-50 rounded p-1"></i>
+                    </button>
                 </div>
+                
+                <!-- Tab内容区 -->
+                <div class="flex-1 overflow-hidden relative">
+                    <!-- 报表列表Tab内容 -->
+                    <div v-show="currentActiveTab === 'list'" class="h-full flex flex-col bg-white">
+                        <div class="h-12 bg-gray-50 border-b border-gray-100 flex items-center justify-between px-6 shrink-0">
+                            <div class="flex items-center gap-2 text-sm">
+                                <span class="text-gray-500">当前目录：</span>
+                                <span v-if="selectedDir" class="text-gray-800 font-medium">{{ selectedDir['节点名'] }}</span>
+                                <span v-else class="text-gray-400">请选择左侧目录</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="relative">
+                                    <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                                    <input v-model="searchKeyword" @input="resetToFirstPage" type="text" placeholder="搜索报表名称"
+                                        class="pl-8 pr-3 py-1.5 text-sm border rounded-md bg-gray-50 focus:bg-white focus:border-blue-400 focus:outline-none"
+                                        :disabled="!selectedDirId">
+                                </div>
+                                <button @click="refreshReports" :disabled="!selectedDirId || listLoading"
+                                    class="px-2 py-1.5 text-xs rounded border transition-colors flex items-center gap-1"
+                                    :class="!selectedDirId || listLoading ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:text-blue-600'">
+                                    <i :class="listLoading ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-arrows-rotate'"></i>
+                                </button>
+                            </div>
+                        </div>
 
-                <div v-else class="h-full flex flex-col">
-                    <div class="flex-1 overflow-hidden relative">
-                        <iframe :key="selectedNodeId" ref="iframeRef" @load="onIframeLoad" :src="getIframeSrc()"
-                            class="w-full h-full border-0">
-                        </iframe>
+                        <div class="flex-1 overflow-y-auto">
+                            <table v-if="selectedDirId" class="min-w-full text-sm">
+                                <thead class="bg-gray-50 text-gray-600 sticky top-0">
+                                    <tr>
+                                        <th class="text-left px-4 py-2 w-12">序号</th>
+                                        <th class="text-left px-4 py-2">报表名称</th>
+                                        <th class="text-left px-4 py-2 w-32">编号</th>
+                                        <th class="text-left px-4 py-2 w-24">类型</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(report, index) in paginatedReports" :key="report['编号']"
+                                        @click="openReportTab(report)"
+                                        class="border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors">
+                                        <td class="px-4 py-2 text-gray-500">{{ (currentPage - 1) * pageSize + index + 1 }}</td>
+                                        <td class="px-4 py-2 text-gray-800 font-medium truncate">{{ report['节点名'] }}</td>
+                                        <td class="px-4 py-2 text-gray-600 text-xs">{{ report['编号'] }}</td>
+                                        <td class="px-4 py-2 text-gray-600 text-xs">{{ report['节点类型'] || '明细报表' }}</td>
+                                    </tr>
+                                    <tr v-if="!listLoading && paginatedReports.length === 0">
+                                        <td colspan="4" class="px-4 py-8 text-center text-gray-400 text-sm">暂无报表</td>
+                                    </tr>
+                                    <tr v-if="listLoading">
+                                        <td colspan="4" class="px-4 py-8 text-center text-gray-400 text-sm">加载中...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div v-else class="h-full flex items-center justify-center text-gray-400 text-sm">
+                                请选择左侧目录后查看报表列表
+                            </div>
+                        </div>
+
+                        <div v-if="selectedDirId" class="px-4 py-2 border-t border-gray-100 flex items-center justify-between bg-gray-50 shrink-0">
+                            <div class="text-xs text-gray-500">共 {{ totalReports }} 条 | 第 {{ currentPage }} / {{ totalPages }} 页</div>
+                            <div class="flex items-center gap-2">
+                                <button @click="prevPage" :disabled="currentPage === 1"
+                                    class="px-2 py-1 text-xs rounded border transition-colors"
+                                    :class="currentPage === 1 ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:text-blue-600'">
+                                    <i class="fa-solid fa-chevron-left"></i>
+                                </button>
+                                <button @click="nextPage" :disabled="currentPage === totalPages || totalPages === 0"
+                                    class="px-2 py-1 text-xs rounded border transition-colors"
+                                    :class="(currentPage === totalPages || totalPages === 0) ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:text-blue-600'">
+                                    <i class="fa-solid fa-chevron-right"></i>
+                                </button>
+                                <select v-model.number="pageSize" @change="resetToFirstPage"
+                                    class="text-xs border rounded px-2 py-1 bg-white">
+                                    <option :value="10">10/页</option>
+                                    <option :value="20">20/页</option>
+                                    <option :value="50">50/页</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- 预览Tab内容 (iframes) -->
+                    <iframe v-for="tab in previewTabs" :key="tab.id"
+                        v-show="tab.id === currentActiveTab"
+                        :src="tab.url"
+                        :ref="el => { if (el) iframeRefs[tab.id] = el }"
+                        @load="handleIframeLoad(tab)"
+                        class="w-full h-full border-0"
+                        :title="tab.name"></iframe>
                 </div>
             </section>
         </main>
 
     </div>
-
-    <script type="text/x-template" id="tree-node-template">
-        <div class="relative pl-4 select-none">
-            <div v-if="depth > 0" class="tree-line"></div>
-            
-            <div 
-                class="group relative flex items-center justify-between p-2 rounded-md cursor-pointer transition-all duration-200 border border-transparent hover:bg-gray-100 mb-1"
-                :class="{'bg-blue-50 border-blue-100': isSelected}"
-                @click.stop="handleClick"
-            >
-                <div class="flex items-center gap-2 overflow-hidden">
-                    <span 
-                        v-if="isFolder" 
-                        @click.stop="toggle" 
-                        class="w-5 h-5 flex items-center justify-center rounded hover:bg-gray-200 text-gray-400 transition-colors"
-                    >
-                        <i :class="isOpen ? 'fa-solid fa-caret-down text-gray-600' : 'fa-solid fa-caret-right'"></i>
-                    </span>
-                    <span v-else class="w-5 h-5"></span>
-
-                    <i :class="[getIconClass, isSelected ? 'text-blue-600' : 'text-gray-500']" class="text-sm"></i>
-                    
-                    <span class="text-sm font-medium truncate" :class="isSelected ? 'text-blue-700' : 'text-gray-700'">
-                        {{ node['节点名'] }}
-                    </span>
-                </div>
-            </div>
-
-            <transition name="fade">
-                <div v-if="isFolder && isOpen" class="relative">
-                    <tree-node 
-                        v-for="child in node.children" 
-                        :key="child['编号']" 
-                        :node="child"
-                        :depth="depth + 1"
-                        :selected-id="selectedId"
-                        @select="$emit('select', $event)"
-                    ></tree-node>
-                </div>
-            </transition>
-        </div>
-    </script>
 
     <!-- SDK Preload - Must be first -->
     <script src="js/preload.js" devSdkUrl="http://183.6.70.7:24689/wp-core/api/getPanelXSdk"></script>
@@ -174,113 +230,128 @@
 
     <script>
         // SDK脚本无法离线访问，使用本地默认URL进行开发测试
-        const { createApp, ref, computed, onMounted, nextTick } = Vue;
+        const { createApp, ref, computed, onMounted } = Vue;
 
         // 全局SDK实例
         let sdk = null;
 
-        /**
-         * 通过SDK查询节点的最新json配置
-         * @param {string} nodeCode - 节点编号
-         * @returns {Object} 查询结果，包含json配置
-         */
-        async function queryNodeConfigFromSDK(nodeCode) {
-            try {
-                if (!sdk) {
-                    sdk = await window.initializeSDK();
-                }
-
-                if (!sdk || !sdk.api) {
-                    console.error('SDK不可用');
-                    return null;
-                }
-
-                const params = {
-                    "panelCode": "IML_00001",
-                    "condition": {
-                        "code": nodeCode
-                    }
-                };
-
-                console.log('调用SDK查询节点配置，参数:', params);
-
-                const result = await sdk.api.queryFormData(params);
-
-                console.log('SDK查询结果:', result);
-
-                if (result && result.state === '200' && result.data && result.data.list && result.data.list.length > 0) {
-                    return result.data.list[0]; // 返回第一条结果
-                }
-
-                return null;
-            } catch (error) {
-                console.error('SDK查询失败:', error);
-                return null;
-            }
-        }
+        const LIST_PANEL_CODE = 'OctoCM_BDYTH_IML_00001';
 
         // --- Default Mock Data ---
         const DEFAULT_DATA = [
             { "编号": "000", "节点名": "父节点", "节点类型": "目录" },
-            { "编号": "002", "节点名": "测试明细 (ID: 002)", "节点类型": "明细报表", "parentCode": "000", "json": "{\"reportType\": \"detail\", \"dataKey\": \"a\"}" },
-            { "编号": "001", "节点名": "测试指标 (ID: 001)", "节点类型": "指标报表", "json": "{\"reportType\": \"indicator\", \"dataKey\": \"b\"}", "parentCode": "000" }
+            { "编号": "001", "节点名": "样例报表A", "节点类型": "明细报表", "parentCode": "000" },
+            { "编号": "002", "节点名": "样例报表B", "节点类型": "明细报表", "parentCode": "000" }
         ];
-
-        // --- Tree Node Component ---
-        const TreeNode = {
-            template: '#tree-node-template',
-            name: 'TreeNode',
-            props: ['node', 'selectedId', 'depth'],
-            emits: ['select'],
-            setup(props, { emit }) {
-                const isOpen = ref(false);
-                if (props.depth === 0) isOpen.value = true;
-
-                const isFolder = computed(() => props.node['节点类型'] === '目录');
-                const isSelected = computed(() => props.node['编号'] === props.selectedId);
-                const getIconClass = computed(() => {
-                    const type = props.node['节点类型'];
-                    if (type === '目录') return isOpen.value ? 'fa-regular fa-folder-open text-yellow-500' : 'fa-regular fa-folder text-yellow-500';
-                    if (type === '指标报表') return 'fa-solid fa-chart-pie text-purple-500';
-                    if (type === '明细报表') return 'fa-solid fa-table-list text-green-500';
-                    return 'fa-regular fa-file';
-                });
-
-                const toggle = () => { if (isFolder.value) isOpen.value = !isOpen.value; };
-                const handleClick = () => {
-                    emit('select', props.node);
-                    if (isFolder.value) toggle();
-                };
-
-                return { isOpen, isFolder, isSelected, getIconClass, toggle, handleClick };
-            }
-        };
 
         // --- Main App ---
         createApp({
-            components: { TreeNode },
             setup() {
                 const flatList = ref([]);
-                const selectedNodeId = ref(null);
-                const iframeRef = ref(null);
+                const selectedDirId = ref(null);
                 const refreshLoading = ref(false);
 
+                const reportList = ref([]);
+                const listLoading = ref(false);
+
+                const searchKeyword = ref('');
+                const currentPage = ref(1);
+                const pageSize = ref(10);
+
+                // Tab管理：{ [dirId]: { activeTab: string, tabs: [{id, name, url, nodeCode}] } }
+                const dirTabsMap = ref({});
+                
+                // iframe引用映射
+                const iframeRefs = ref({});
+
+                // --- Computed ---
+                const allDirectories = computed(() => {
+                    return flatList.value.filter(n => n['节点类型'] === '目录');
+                });
+
+                const selectedDir = computed(() => {
+                    return flatList.value.find(n => n['编号'] === selectedDirId.value);
+                });
+
+                const filteredReports = computed(() => {
+                    const keyword = searchKeyword.value.trim().toLowerCase();
+                    let reports = reportList.value;
+                    if (keyword) {
+                        reports = reports.filter(r => (r['节点名'] || '').toLowerCase().includes(keyword));
+                    }
+                    return reports;
+                });
+
+                const totalReports = computed(() => filteredReports.value.length);
+                const totalPages = computed(() => {
+                    const pages = Math.ceil(totalReports.value / pageSize.value);
+                    return pages > 0 ? pages : 1;
+                });
+                const paginatedReports = computed(() => {
+                    const start = (currentPage.value - 1) * pageSize.value;
+                    const end = start + pageSize.value;
+                    return filteredReports.value.slice(start, end);
+                });
+
+                const currentTabs = computed(() => {
+                    if (!selectedDirId.value) return [];
+                    return dirTabsMap.value[selectedDirId.value]?.tabs || [];
+                });
+
+                const currentActiveTab = computed(() => {
+                    if (!selectedDirId.value) return null;
+                    return dirTabsMap.value[selectedDirId.value]?.activeTab || null;
+                });
+
+                // 所有tabs包括固定的列表tab和预览tabs
+                const allTabs = computed(() => {
+                    const listTab = {
+                        id: 'list',
+                        name: selectedDir.value ? selectedDir.value['节点名'] : '报表列表',
+                        isListTab: true
+                    };
+                    return [listTab, ...currentTabs.value];
+                });
+
+                // 仅预览tabs（用于iframe渲染）
+                const previewTabs = computed(() => {
+                    return currentTabs.value.filter(t => !t.isListTab);
+                });
+
+                const getDirectoryTabCount = (dirId) => {
+                    return dirTabsMap.value[dirId]?.tabs?.length || 0;
+                };
+
+                const resetToFirstPage = () => {
+                    currentPage.value = 1;
+                };
+
+                const prevPage = () => {
+                    if (currentPage.value > 1) currentPage.value -= 1;
+                };
+
+                const nextPage = () => {
+                    if (currentPage.value < totalPages.value) currentPage.value += 1;
+                };
+
                 // --- Data Loading ---
-                const loadData = async () => {
+                const loadTreeData = async () => {
                     let finalData = [];
                     try {
                         if (!sdk) sdk = await window.initializeSDK();
                         if (sdk && sdk.api) {
                             const res = await sdk.api.queryFormDataList({
-                                panelCode: 'OctoCM_BDYTH_IML_00001',
+                                panelCode: LIST_PANEL_CODE,
                                 pageNo: 1,
-                                pageSize: 200
+                                pageSize: 500
                             });
                             if (res?.data?.list) {
                                 finalData = res.data.list;
                             }
                         }
-                    } catch (e) { console.error(e); }
+                    } catch (e) {
+                        console.error('加载目录失败，使用默认数据:', e);
+                    }
 
                     if (!finalData || finalData.length === 0) {
                         finalData = JSON.parse(JSON.stringify(DEFAULT_DATA));
@@ -289,202 +360,165 @@
                     flatList.value = finalData;
                 };
 
-                // --- Tree Logic ---
-                const treeData = computed(() => {
-                    const data = JSON.parse(JSON.stringify(flatList.value));
-                    const map = {};
-                    const roots = [];
-                    data.forEach(node => { node.children = []; map[node['编号']] = node; });
-                    data.forEach(node => {
-                        if (node['parentCode'] && map[node['parentCode']]) {
-                            map[node['parentCode']].children.push(node);
-                        } else {
-                            roots.push(node);
+                const loadReportsForDir = async (dirId) => {
+                    if (!dirId) return;
+                    listLoading.value = true;
+                    try {
+                        let reports = [];
+                        if (!sdk) sdk = await window.initializeSDK();
+                        if (sdk && sdk.api) {
+                            const res = await sdk.api.queryFormDataList({
+                                panelCode: LIST_PANEL_CODE,
+                                pageNo: 1,
+                                pageSize: 500,
+                                condition: {
+                                    parentCode: dirId
+                                }
+                            });
+                            if (res?.data?.list) {
+                                reports = res.data.list.filter(n => n['节点类型'] !== '目录');
+                            }
                         }
-                    });
-                    return roots;
-                });
 
-                const selectedNode = computed(() => flatList.value.find(n => n['编号'] === selectedNodeId.value));
+                        if (!reports || reports.length === 0) {
+                            reports = flatList.value.filter(n => n['parentCode'] === dirId && n['节点类型'] !== '目录');
+                        }
 
-                // 获取iframe的src，根据节点类型决定
-                const getIframeSrc = () => {
-                    if (!selectedNode.value) return './queryPreview.html';
-                    const nodeType = selectedNode.value['节点类型'];
-                    if (nodeType === '明细报表') {
-                        return './detailQueryPreview.html';
+                        reportList.value = reports;
+                        resetToFirstPage();
+                    } catch (e) {
+                        console.error('加载报表失败:', e);
+                    } finally {
+                        listLoading.value = false;
                     }
-                    return './queryPreview.html';
+                };
+
+                // --- Directory Tab Switching ---
+                const switchDirectory = async (dir) => {
+                    selectedDirId.value = dir['编号'];
+                    searchKeyword.value = '';
+                    currentPage.value = 1;
+                    
+                    // 初始化当前目录的tabs结构
+                    if (!dirTabsMap.value[dir['编号']]) {
+                        dirTabsMap.value[dir['编号']] = {
+                            activeTab: 'list',  // 默认激活列表tab
+                            tabs: []
+                        };
+                    }
+
+                    // 如果当前目录没有激活tab，激活列表tab
+                    if (!dirTabsMap.value[dir['编号']].activeTab) {
+                        dirTabsMap.value[dir['编号']].activeTab = 'list';
+                    }
+
+                    await loadReportsForDir(dir['编号']);
+                };
+
+                // --- Report Tab Management ---
+                const openReportTab = (report) => {
+                    const dirId = selectedDirId.value;
+                    if (!dirId) return;
+
+                    const nodeCode = report['编号'];
+                    const tabId = `preview-${nodeCode}`;
+                    
+                    // 初始化目录tabs结构
+                    if (!dirTabsMap.value[dirId]) {
+                        dirTabsMap.value[dirId] = {
+                            activeTab: 'list',
+                            tabs: []
+                        };
+                    }
+
+                    const dirTabs = dirTabsMap.value[dirId];
+                    
+                    // 检查tab是否已存在
+                    const existingTab = dirTabs.tabs.find(t => t.id === tabId);
+                    if (existingTab) {
+                        // 已存在，切换到该tab
+                        dirTabs.activeTab = tabId;
+                        return;
+                    }
+
+                    // 创建新tab
+                    const isDetail = report['节点类型'] === '明细报表';
+                    const url = (isDetail ? './detailQueryPreview.html' : './queryPreview.html') + 
+                                '?nodeCode=' + encodeURIComponent(nodeCode);
+                    
+                    const newTab = {
+                        id: tabId,
+                        name: report['节点名'],
+                        url: url,
+                        nodeCode: nodeCode,
+                        isListTab: false
+                    };
+
+                    dirTabs.tabs.push(newTab);
+                    dirTabs.activeTab = tabId;
+                };
+
+                const switchTab = (tabId) => {
+                    const dirId = selectedDirId.value;
+                    if (!dirId || !dirTabsMap.value[dirId]) return;
+                    dirTabsMap.value[dirId].activeTab = tabId;
+                };
+
+                const closeTab = (tabId) => {
+                    const dirId = selectedDirId.value;
+                    if (!dirId || !dirTabsMap.value[dirId]) return;
+                    if (tabId === 'list') return;  // 不允许关闭列表tab
+
+                    const dirTabs = dirTabsMap.value[dirId];
+                    const tabIndex = dirTabs.tabs.findIndex(t => t.id === tabId);
+                    
+                    if (tabIndex === -1) return;
+
+                    // 如果关闭的是当前激活tab，需要切换到其他tab
+                    if (dirTabs.activeTab === tabId) {
+                        if (dirTabs.tabs.length > 1) {
+                            // 优先切换到右侧tab，否则切换到左侧
+                            const nextIndex = tabIndex < dirTabs.tabs.length - 1 ? tabIndex + 1 : tabIndex - 1;
+                            dirTabs.activeTab = dirTabs.tabs[nextIndex].id;
+                        } else {
+                            // 只剩这一个预览tab，关闭后回到列表tab
+                            dirTabs.activeTab = 'list';
+                        }
+                    }
+
+                    // 删除tab
+                    dirTabs.tabs.splice(tabIndex, 1);
                 };
 
                 // --- Iframe Communication ---
-                const sendMessageToIframe = (node) => {
-                    const iframe = iframeRef.value;
-                    console.log('sendMessageToIframe 被调用, node:', node, 'node.json:', node?.json);
-                    if (iframe && iframe.contentWindow && node) {
-                        let configData = {};
-                        try {
-                            const parsed = typeof node.json === 'string' ? JSON.parse(node.json) : node.json;
-                            console.log('解析后的 parsed:', parsed, 'typeof:', typeof parsed);
-                            // 确保parsed是一个有效的对象，而不是null或其他类型
-                            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-                                configData = parsed;
-                            } else {
-                                console.warn("节点JSON配置不是有效对象:", parsed);
-                                configData = {};
-                            }
-                        } catch (e) {
-                            console.error("Error parsing JSON config:", e);
-                            configData = {};
-                        }
+                const handleIframeLoad = (tab) => {
+                    // iframe加载完成后，发送nodeCode数据
+                    const iframe = iframeRefs.value[tab.id];
+                    if (!iframe || !iframe.contentWindow) return;
 
-                        console.log('在设置reportCode前, configData:', configData, 'typeof:', typeof configData);
-
-                        // 将节点编号添加到配置中作为reportCode
-                        // 额外的安全检查
-                        if (!configData || typeof configData !== 'object') {
-                            configData = {};
-                        }
-                        configData.reportCode = node['编号'];
-
-                        console.log('通过postMessage发送配置数据给iframe:', configData);
-
-                        // 根据节点类型发送不同的消息类型
-                        const nodeType = node['节点类型'];
-                        const messageType = nodeType === '明细报表' ? 'displayDetailTableConfig' : 'displayTableConfig';
-
-                        iframe.contentWindow.postMessage({
-                            type: messageType,
-                            config: configData,
-                            cellConfigurations: configData?.cellConfigurations || {}
-                        }, '*');
+                    try {
+                        // 等待一小段时间确保iframe内部脚本已加载
+                        setTimeout(() => {
+                            const message = {
+                                type: 'INIT_NODE_CODE',
+                                nodeCode: tab.nodeCode,
+                                nodeName: tab.name
+                            };
+                            iframe.contentWindow.postMessage(message, '*');
+                            console.log('发送nodeCode到iframe:', message);
+                        }, 100);
+                    } catch (e) {
+                        console.error('发送消息到iframe失败:', e);
                     }
                 };
 
-                const onIframeLoad = () => {
-                    console.log('iframe加载完成');
-                    if (selectedNode.value) {
-                        sendMessageToIframe(selectedNode.value);
-                    }
-                };
-
-                // --- Actions ---
-                const handleSelect = async (node) => {
-                    selectedNodeId.value = node['编号'];
-
-                    console.log('选择节点:', node['节点名']);
-
-                    // 如果是报表类型，则通过SDK查询获取最新配置
-                    if ((node['节点类型'] === '指标报表' || node['节点类型'] === '明细报表')) {
-                        try {
-                            console.log('开始查询节点的最新配置...');
-
-                            // 调用SDK查询接口
-                            const queryResult = await queryNodeConfigFromSDK(node['编号']);
-
-                            if (queryResult && queryResult.json) {
-                                // console.log('从SDK获取到节点配置:', queryResult.json);
-
-                                // 解析json配置
-                                let configData = {};
-                                try {
-                                    const parsed = typeof queryResult.json === 'string' ? JSON.parse(queryResult.json) : queryResult.json;
-                                    // 确保parsed是一个有效的对象，而不是null或其他类型
-                                    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-                                        configData = parsed;
-                                    } else {
-                                        console.warn("解析的JSON配置不是有效对象:", parsed);
-                                        configData = {};
-                                    }
-                                } catch (e) {
-                                    console.error("解析JSON配置失败:", e);
-                                    configData = {};
-                                }
-
-                                // 将节点编号添加到配置中作为reportCode
-                                // 额外的安全检查
-                                if (!configData || typeof configData !== 'object') {
-                                    configData = {};
-                                }
-                                configData.reportCode = node['编号'];
-
-                                // 延迟发送消息到iframe，确保iframe已加载
-                                nextTick(() => {
-                                    console.log('nextTick回调执行, iframeRef.value:', iframeRef.value);
-                                    if (iframeRef.value && iframeRef.value.contentWindow) {
-                                        console.log('通过postMessage发送配置数据给iframe:', configData);
-
-                                        // 根据节点类型发送不同的消息类型
-                                        const nodeType = node['节点类型'];
-                                        const messageType = nodeType === '明细报表' ? 'displayDetailTableConfig' : 'displayTableConfig';
-
-                                        iframeRef.value.contentWindow.postMessage({
-                                            type: messageType,
-                                            config: configData,
-                                            cellConfigurations: configData?.cellConfigurations || {}
-                                        }, '*');
-                                    } else {
-                                        console.error('nextTick中iframe未就绪');
-                                    }
-                                });
-                            } else {
-                                console.error('未从SDK获取到有效的json配置');
-                                nextTick(() => {
-                                    console.log('nextTick回调执行(无配置), iframeRef.value:', iframeRef.value);
-                                    if (iframeRef.value && iframeRef.value.contentWindow) {
-                                        iframeRef.value.contentWindow.postMessage({
-                                            type: 'displayTableConfig',
-                                            config: null,
-                                            cellConfigurations: {}
-                                        }, '*');
-                                    }
-                                });
-                            }
-                        } catch (error) {
-                            console.error('查询SDK失败:', error);
-                            nextTick(() => {
-                                console.log('nextTick回调执行(查询失败), iframeRef.value:', iframeRef.value);
-                                if (iframeRef.value && iframeRef.value.contentWindow) {
-                                    iframeRef.value.contentWindow.postMessage({
-                                        type: 'displayTableConfig',
-                                        config: null,
-                                        cellConfigurations: {}
-                                    }, '*');
-                                }
-                            });
-                        }
-                    } else {
-                        // 目录节点不显示内容
-                        console.log('这是一个目录节点，不显示预览');
-                    }
-                };
-
-                // 打开设计页面
-                const openDesignPage = () => {
-                    if (!selectedNode.value) return;
-
-                    const nodeType = selectedNode.value['节点类型'];
-                    const nodeCode = selectedNode.value['编号'];
-
-                    let designPageUrl = '';
-                    if (nodeType === '明细报表') {
-                        designPageUrl = `./expenseStatement.html?nodeCode=${encodeURIComponent(nodeCode)}`;
-                    } else if (nodeType === '指标报表') {
-                        designPageUrl = `./index.html?nodeCode=${encodeURIComponent(nodeCode)}`;
-                    }
-
-                    if (designPageUrl) {
-                        window.open(designPageUrl, '_blank');
-                    }
-                };
-
-                // 刷新树（重新拉取数据并清空选中）
                 const refreshTree = async () => {
                     if (refreshLoading.value) return;
                     refreshLoading.value = true;
                     try {
-                        await loadData();
-                        selectedNodeId.value = null;
+                        await loadTreeData();
+                        selectedDirId.value = null;
+                        reportList.value = [];
                     } catch (e) {
                         console.error('刷新失败:', e);
                     } finally {
@@ -492,21 +526,46 @@
                     }
                 };
 
+                const refreshReports = async () => {
+                    if (!selectedDirId.value) return;
+                    await loadReportsForDir(selectedDirId.value);
+                };
+
                 onMounted(async () => {
-                    await loadData();
+                    await loadTreeData();
                 });
 
                 return {
-                    treeData,
-                    selectedNodeId,
-                    selectedNode,
-                    iframeRef,
+                    // state
+                    allDirectories,
+                    selectedDirId,
+                    selectedDir,
                     refreshLoading,
+                    reportList,
+                    listLoading,
+                    searchKeyword,
+                    currentPage,
+                    pageSize,
+                    paginatedReports,
+                    totalReports,
+                    totalPages,
+                    currentTabs,
+                    currentActiveTab,
+                    allTabs,
+                    previewTabs,
+                    iframeRefs,
+                    // methods
+                    switchDirectory,
+                    openReportTab,
+                    switchTab,
+                    closeTab,
+                    prevPage,
+                    nextPage,
+                    resetToFirstPage,
                     refreshTree,
-                    handleSelect,
-                    onIframeLoad,
-                    getIframeSrc,
-                    openDesignPage
+                    refreshReports,
+                    getDirectoryTabCount,
+                    handleIframeLoad
                 };
             }
         }).mount('#app');

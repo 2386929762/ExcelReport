@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh">
 
 <head>
@@ -263,6 +263,9 @@
 		// 存储当前配置信息
 		let currentConfig = null;
 
+		// 缓存表字段信息（从queryTableInfo获取）
+		let cachedTableFieldsInfo = null;
+
 		// 模拟的表数据映射（与expenseStatement.html保持一致）
 		window.tableDataMap = {
 			'客户信息表': {
@@ -336,7 +339,7 @@
 
 			try {
 				// 构建查询参数 - 需要传入报表的code
-				const reportCode = config.reportCode || "ef563b19_14b7_427d_b523_29b9f3d79d18";
+				const reportCode = config.reportCode;
 
 				const params = {
 					"panelCode": "IML_00001",
@@ -350,6 +353,11 @@
 				const filterClause = buildFilterClause();
 				params.buttonParam.filter = filterClause || '';
 				console.log('添加过滤条件:', filterClause || '(空)');
+
+				// 添加时间过滤条件（始终传递，即使为空数组）
+				const timeFilter = buildTimeFilter();
+				params.buttonParam.timeFilter = timeFilter;
+				console.log('添加时间过滤条件:', timeFilter);
 
 				console.log('调用SDK查询，参数:', params);
 				const result = await sdk.api.callButton(params);
@@ -377,22 +385,90 @@
 				currentConfig = config;
 
 				// 初始化过滤输入区域
-				initFilterInputs(config);
+				await initFilterInputs(config);
+
+				// 初始查询（不带过滤条件）
+				await performQuery();
+			} else if (event.data.type === 'INIT_NODE_CODE') {
+				// 从queryTree.html打开tab的情况
+				const { nodeCode, nodeName } = event.data;
+				console.log('收到nodeCode:', nodeCode, nodeName);
 
 				// 确保SDK已初始化
 				if (!sdk) {
 					sdk = await window.initializeSDK();
 				}
 
-				// 初始查询（不带过滤条件）
-				await performQuery();
+				// 从SDK加载配置
+				await loadConfigByNodeCode(nodeCode, nodeName);
 			}
 		});
 
 		/**
+		 * 根据nodeCode从SDK加载配置并显示
+		 */
+		async function loadConfigByNodeCode(nodeCode, nodeName) {
+			try {
+				console.log('开始加载nodeCode的配置:', nodeCode);
+
+				// 使用queryFormData查询配置
+				const params = {
+					panelCode: 'IML_00001',
+					condition: { code: nodeCode }
+				};
+
+				console.log('从SDK查询配置，参数:', params);
+				const result = await sdk.api.queryFormData(params);
+				console.log('SDK查询结果:', result);
+
+				if (result && result.state === '200' && result.data && result.data.list && result.data.list.length > 0) {
+					const nodeData = result.data.list[0];
+					if (nodeData.json) {
+						try {
+							const config = typeof nodeData.json === 'string' ? JSON.parse(nodeData.json) : nodeData.json;
+							
+							// 补充reportCode
+							if (!config.reportCode) {
+								config.reportCode = nodeCode;
+							}
+
+							currentConfig = config;
+							console.log('已加载配置:', currentConfig);
+
+							// 初始化过滤输入区域
+						await initFilterInputs(config);
+							// 初始查询（不带过滤条件）
+							await performQuery();
+						} catch (e) {
+							console.error('解析配置JSON失败:', e);
+							displayError('解析配置数据失败');
+						}
+					} else {
+						console.error('配置数据为空');
+						displayError('无法加载报表配置');
+					}
+				} else {
+					console.error('获取配置失败:', result);
+					displayError('获取报表配置失败: ' + (result?.msg || '未知错误'));
+				}
+			} catch (error) {
+				console.error('加载配置异常:', error);
+				displayError('加载报表配置异常: ' + error.message);
+			}
+		}
+
+		/**
+		 * 显示错误信息
+		 */
+		function displayError(message) {
+			const container = document.getElementById('table-content');
+			container.innerHTML = `<div class="no-data" style="color: #f56565;">${message}</div>`;
+		}
+
+		/**
 		 * 初始化过滤输入区域
 		 */
-		function initFilterInputs(config) {
+		async function initFilterInputs(config) {
 			const filterArea = document.getElementById('filter-input-area');
 			const filterContainer = document.getElementById('filter-inputs-container');
 
@@ -408,33 +484,119 @@
 			// 清空容器
 			filterContainer.innerHTML = '';
 
-			// 为每个过滤字段创建输入框
-			config.filterFields.forEach(field => {
+			// 查询表信息获取字段分类
+			let tableFieldsInfo = null;
+			if (config.detailReportConfig && config.detailReportConfig.selectedTableCode) {
+				tableFieldsInfo = await queryTableInfo(config.detailReportConfig.selectedTableCode);
+				// 缓存表字段信息，供后续使用
+				cachedTableFieldsInfo = tableFieldsInfo;
+			}
+
+			// 为每个过滤字段创建输入框或下拉框
+			for (const field of config.filterFields) {
 				const filterItem = document.createElement('div');
 				filterItem.className = 'filter-input-item';
 
-				// 优先使用fieldLabels中的中文名
-				let displayName = field.displayName || field.field;
-				if (currentConfig && currentConfig.detailReportConfig && currentConfig.detailReportConfig.fieldLabels) {
-					const labelFromConfig = currentConfig.detailReportConfig.fieldLabels[field.field];
-					if (labelFromConfig) {
-						displayName = labelFromConfig;
-					}
+			// 查找字段信息，判断是否为维度字段或日期字段
+			let fieldInfo = null;
+			if (tableFieldsInfo) {
+				fieldInfo = tableFieldsInfo.find(f => f['字段名'] === field.field);
+			}
+
+			// 确定显示名称的优先级：
+			// 1. 优先使用从queryTableInfo获取的最新字段中文名
+			// 2. 其次使用配置中的fieldLabels
+			// 3. 最后使用field.displayName或字段名
+			let displayName = field.displayName || field.field;
+			
+			// 优先使用从表信息中获取的最新字段中文名
+			if (fieldInfo && fieldInfo['字段中文名']) {
+				displayName = fieldInfo['字段中文名'];
+			} else if (currentConfig && currentConfig.detailReportConfig && currentConfig.detailReportConfig.fieldLabels) {
+				const labelFromConfig = currentConfig.detailReportConfig.fieldLabels[field.field];
+				if (labelFromConfig) {
+					displayName = labelFromConfig;
 				}
+			}
 
-				const label = document.createElement('label');
-				label.textContent = displayName;
+			const label = document.createElement('label');
+			label.textContent = displayName;
 
-				const input = document.createElement('input');
-				input.type = 'text';
-				input.dataset.field = field.field;
-				input.dataset.table = field.table;
-				input.placeholder = `请输入${displayName}`;
+			// 如果是维度字段，创建下拉框
+			if (fieldInfo && fieldInfo['字段分类'] === '维度') {
+				const select = document.createElement('select');
+				select.dataset.field = field.field;
+				select.dataset.table = field.table;
+				select.style.padding = '6px 12px';
+				select.style.border = '1px solid #ddd';
+				select.style.borderRadius = '4px';
+				select.style.fontSize = '13px';
+				select.style.minWidth = '200px';
+
+				// 添加默认选项
+				const defaultOption = document.createElement('option');
+				defaultOption.value = '';
+				defaultOption.textContent = '全部';
+				select.appendChild(defaultOption);
+
+				// 异步加载码值选项
+				const category = fieldInfo['类别'];
+				loadCodeValues(select, category);
 
 				filterItem.appendChild(label);
-				filterItem.appendChild(input);
+				filterItem.appendChild(select);
+			} else if (fieldInfo && fieldInfo['类型'] === '日期') {
+				// 日期类型字段，创建开始时间和结束时间选择器
+				filterItem.style.display = 'flex';
+				filterItem.style.alignItems = 'center';
+				filterItem.style.gap = '8px';
+
+				// 创建开始时间选择器
+				const startInput = document.createElement('input');
+				startInput.type = 'datetime-local';
+				startInput.dataset.field = field.field;
+				startInput.dataset.table = field.table;
+				startInput.dataset.timeType = 'start';
+				startInput.dataset.dateFormat = fieldInfo['日期格式'] || 'YYYYMMDD';
+				startInput.style.padding = '6px 12px';
+				startInput.style.border = '1px solid #ddd';
+				startInput.style.borderRadius = '4px';
+				startInput.style.fontSize = '13px';
+
+				// 创建结束时间选择器
+				const endInput = document.createElement('input');
+				endInput.type = 'datetime-local';
+				endInput.dataset.field = field.field;
+				endInput.dataset.table = field.table;
+				endInput.dataset.timeType = 'end';
+				endInput.dataset.dateFormat = fieldInfo['日期格式'] || 'YYYYMMDD';
+				endInput.style.padding = '6px 12px';
+				endInput.style.border = '1px solid #ddd';
+				endInput.style.borderRadius = '4px';
+				endInput.style.fontSize = '13px';
+
+				const separator = document.createElement('span');
+				separator.textContent = '至';
+				separator.style.margin = '0 4px';
+
+				filterItem.appendChild(label);
+				filterItem.appendChild(startInput);
+				filterItem.appendChild(separator);
+				filterItem.appendChild(endInput);
+				} else {
+					// 普通字段，创建文本输入框
+					const input = document.createElement('input');
+					input.type = 'text';
+					input.dataset.field = field.field;
+					input.dataset.table = field.table;
+					input.placeholder = `请输入${displayName}`;
+
+					filterItem.appendChild(label);
+					filterItem.appendChild(input);
+				}
+
 				filterContainer.appendChild(filterItem);
-			});
+			}
 
 			// 创建按钮容器并添加到过滤容器中
 			const buttonGroup = document.createElement('div');
@@ -460,9 +622,13 @@
 			};
 
 			resetBtn.onclick = function () {
-				// 清空所有输入框
+				// 清空所有输入框（包括日期选择器）
 				filterContainer.querySelectorAll('input').forEach(input => {
 					input.value = '';
+				});
+				// 清空所有下拉框
+				filterContainer.querySelectorAll('select').forEach(select => {
+					select.value = '';
 				});
 				// 重新查询
 				performQuery();
@@ -493,15 +659,76 @@
 		}
 
 		/**
+		 * 构建时间过滤条件数组
+		 */
+		function buildTimeFilter() {
+			const filterContainer = document.getElementById('filter-inputs-container');
+			if (!filterContainer) return [];
+
+			const timeFilters = [];
+			const dateInputs = filterContainer.querySelectorAll('input[type="datetime-local"]');
+			
+			console.log('找到的日期输入框数量:', dateInputs.length);
+			
+			// 按字段分组日期输入框
+			const fieldGroups = new Map();
+			dateInputs.forEach(input => {
+				const field = input.dataset.field;
+				const timeType = input.dataset.timeType;
+				const dateFormat = input.dataset.dateFormat || 'YYYYMMDD';
+				
+				console.log(`处理日期输入框: 字段=${field}, 类型=${timeType}, 值=${input.value}`);
+				
+				if (!fieldGroups.has(field)) {
+					fieldGroups.set(field, { field, dateFormat, start: '', end: '' });
+				}
+				
+				const value = input.value.trim();
+				if (value) {
+					// 将HTML5的datetime-local格式转换为 yyyy-MM-dd HH:mm:ss
+					const formattedValue = value.replace('T', ' ') + ':00';
+					
+					if (timeType === 'start') {
+						fieldGroups.get(field).start = formattedValue;
+					} else if (timeType === 'end') {
+						fieldGroups.get(field).end = formattedValue;
+					}
+				}
+			});
+			
+			console.log('字段分组结果:', Array.from(fieldGroups.entries()));
+			
+			// 构建timeFilter数组
+			fieldGroups.forEach(group => {
+				// 只有至少有一个时间值时才添加
+				if (group.start || group.end) {
+					const filterItem = {
+						"字段": group.field,
+						"开始时间": group.start || '1900-01-01 00:00:00',
+						"结束时间": group.end || '2099-12-31 23:59:59',
+						"时间格式": group.dateFormat
+					};
+					timeFilters.push(filterItem);
+					console.log('添加时间过滤项:', filterItem);
+				}
+			});
+			
+			console.log('构建的时间过滤条件数组，共', timeFilters.length, '项:', timeFilters);
+			return timeFilters;
+		}
+
+		/**
 		 * 构建过滤条件的SQL where子句
 		 */
 		function buildFilterClause() {
 			const filterContainer = document.getElementById('filter-inputs-container');
 			if (!filterContainer) return '';
 
-			const inputs = filterContainer.querySelectorAll('input');
+			const inputs = filterContainer.querySelectorAll('input[type="text"]');
+			const selects = filterContainer.querySelectorAll('select');
 			const filterConditions = [];
 
+			// 处理文本输入框（排除日期选择器）
 			inputs.forEach(input => {
 				const value = input.value.trim();
 				if (value !== '') {
@@ -510,6 +737,18 @@
 					const escapedValue = value.replace(/'/g, "''");
 					// 使用LIKE模糊查询
 					filterConditions.push(`${field} LIKE '%${escapedValue}%'`);
+				}
+			});
+
+			// 处理下拉框
+			selects.forEach(select => {
+				const value = select.value.trim();
+				if (value !== '') {
+					const field = select.dataset.field;
+					// 使用单引号包裹值，并转义单引号
+					const escapedValue = value.replace(/'/g, "''");
+					// 使用精确匹配
+					filterConditions.push(`${field} = '${escapedValue}'`);
 				}
 			});
 
@@ -581,26 +820,51 @@
 			// 建立字段名到中文名的映射
 			const fieldNameToLabel = {};
 
-			// 优先使用SDK返回的label
+			console.log('===== 开始构建字段映射 =====');
+			console.log('缓存的表字段信息:', cachedTableFieldsInfo);
+			console.log('SDK返回的leftFields:', leftFields);
+			console.log('配置中的fieldLabels:', currentConfig?.detailReportConfig?.fieldLabels);
+
+			// 优先级3：先使用配置中的fieldLabels（作为基础）
+			if (currentConfig && currentConfig.detailReportConfig && currentConfig.detailReportConfig.fieldLabels) {
+				Object.keys(currentConfig.detailReportConfig.fieldLabels).forEach(fieldName => {
+					fieldNameToLabel[fieldName] = currentConfig.detailReportConfig.fieldLabels[fieldName];
+				});
+			}
+
+			// 优先级2：使用SDK返回的label（会覆盖配置）
 			leftFields.forEach(field => {
 				if (field.label && field.label !== field.name) {
 					fieldNameToLabel[field.name] = field.label;
 				}
 			});
 
-			// 补充配置中的fieldLabels
-			if (currentConfig && currentConfig.detailReportConfig && currentConfig.detailReportConfig.fieldLabels) {
-				Object.keys(currentConfig.detailReportConfig.fieldLabels).forEach(fieldName => {
-					if (!fieldNameToLabel[fieldName]) {
-						fieldNameToLabel[fieldName] = currentConfig.detailReportConfig.fieldLabels[fieldName];
+			// 优先级1：使用缓存的表字段信息（最新的后台数据，优先级最高，会覆盖前面的）
+			if (cachedTableFieldsInfo && Array.isArray(cachedTableFieldsInfo)) {
+				console.log('使用缓存的表字段信息，共', cachedTableFieldsInfo.length, '个字段');
+				cachedTableFieldsInfo.forEach((fieldInfo, index) => {
+					console.log(`字段 ${index}:`, fieldInfo);
+					const fieldName = fieldInfo['字段名'];
+					const fieldLabel = fieldInfo['字段中文名'];
+					
+					if (fieldName && fieldLabel) {
+						console.log(`准备覆盖: 字段名="${fieldName}" (长度${fieldName.length}), 原值="${fieldNameToLabel[fieldName]}", 新值="${fieldLabel}"`);
+						fieldNameToLabel[fieldName] = fieldLabel;
+						console.log(`覆盖后: "${fieldName}" -> "${fieldNameToLabel[fieldName]}"`);
+					} else {
+						console.log(`跳过字段 ${index}: 字段名或中文名为空`);
 					}
 				});
+			} else {
+				console.log('警告：缓存的表字段信息为空');
 			}
 
-			console.log('字段名到中文名映射:', fieldNameToLabel);
+			console.log('最终字段名到中文名映射:', fieldNameToLabel);
+			console.log('===== 字段映射构建完成 =====');
 
-			// 遍历所有表头行
+			// 方案1：根据{fieldName}格式替换
 			const allRows = Array.from(cloneTable.rows || []);
+			let replacedCount = 0;
 			allRows.forEach(row => {
 				Array.from(row.cells || []).forEach((cell, colIndex) => {
 					// 跳过第一列（序号列），不替换
@@ -615,10 +879,40 @@
 						const fieldName = cellText.substring(1, cellText.length - 1);
 						const displayName = fieldNameToLabel[fieldName] || fieldName;
 						cell.textContent = displayName;
-						console.log(`替换表头: ${cellText} -> ${displayName}`);
+						console.log(`替换表头(格式化): ${cellText} -> ${displayName}`);
+						replacedCount++;
 					}
 				});
 			});
+
+			console.log(`通过{fieldName}格式替换了 ${replacedCount} 个表头`);
+
+			// 方案2：如果没有找到{fieldName}格式，说明表头已经是中文了，需要根据列顺序直接更新
+			if (replacedCount === 0 && allRows.length > 0) {
+				console.log('表头已经是中文，尝试根据leftFields顺序直接更新...');
+				// 找到表头行（通常是第一行或第二行）
+				const headerRow = allRows.find(row => {
+					const firstCell = row.cells[1]; // 跳过序号列
+					return firstCell && firstCell.textContent && firstCell.textContent.trim() !== '';
+				});
+
+				if (headerRow && leftFields.length > 0) {
+					console.log('找到表头行，共有', headerRow.cells.length, '列');
+					// 从第二列开始（跳过序号列），根据leftFields的顺序更新
+					leftFields.forEach((field, index) => {
+						const colIndex = index + 1; // +1 是因为第一列是序号列
+						if (colIndex < headerRow.cells.length) {
+							const cell = headerRow.cells[colIndex];
+							const oldText = cell.textContent;
+							const newText = fieldNameToLabel[field.name] || field.label || field.name;
+							if (oldText !== newText) {
+								cell.textContent = newText;
+								console.log(`直接更新表头(列${colIndex}): "${oldText}" -> "${newText}"`);
+							}
+						}
+					});
+				}
+			}
 		}
 
 		/**
@@ -1554,6 +1848,86 @@
 			table.appendChild(tbody);
 			container.innerHTML = '';
 			container.appendChild(table);
+		}
+
+		/**
+		 * 查询表信息获取字段结构
+		 */
+		async function queryTableInfo(tableCode) {
+			try {
+				if (!sdk) {
+					console.error('SDK未初始化');
+					return null;
+				}
+
+				console.log('查询表信息，表编号:', tableCode);
+				const params = {
+					panelCode: 'IML_00003',
+					condition: {
+						code: tableCode
+					}
+				};
+
+				const result = await sdk.api.queryFormData(params);
+				console.log('查询表信息结果:', result);
+
+				if (result && result.state === '200' && result.data && result.data.list && result.data.list.length > 0) {
+					const tableInfo = result.data.list[0];
+					const fieldsStructure = tableInfo['表结构'];
+					console.log('表结构信息:', fieldsStructure);
+					return fieldsStructure || [];
+				}
+
+				return null;
+			} catch (error) {
+				console.error('查询表信息失败:', error);
+				return null;
+			}
+		}
+
+		/**
+		 * 查询码值选项
+		 */
+		async function loadCodeValues(selectElement, category) {
+			try {
+				if (!sdk) {
+					console.error('SDK未初始化');
+					return;
+				}
+
+				console.log('查询码值，类别:', category);
+				const params = {
+					panelCode: 'IML_00011',
+					buttonName: '查询码值',
+					buttonParam: {
+						configName: '数据字典表'
+					}
+				};
+
+				const result = await sdk.api.callButton(params);
+				console.log('查询码值结果:', result);
+
+				if (result && result.state === '200' && result.data && result.data.right) {
+					const allCodeValues = result.data.right;
+					
+					// 根据类别过滤
+					const filteredValues = category 
+						? allCodeValues.filter(row => row[2] === category)
+						: allCodeValues;
+
+					console.log(`类别[${category}]的码值:`, filteredValues);
+
+					// 添加选项（使用第二个值作为显示文本）
+					filteredValues.forEach(row => {
+						const option = document.createElement('option');
+						option.value = row[0]; // 使用第二个值（如"人民币"）
+						option.textContent = row[1];
+						selectElement.appendChild(option);
+					});
+				}
+			} catch (error) {
+				console.error('查询码值失败:', error);
+			}
 		}
 
 		/**

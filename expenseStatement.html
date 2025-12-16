@@ -489,11 +489,32 @@
         };
 
         // 监听来自父窗口的消息
-        window.addEventListener('message', function (event) {
+        window.addEventListener('message', async function (event) {
             if (event.data) {
                 try {
                     console.log('明细报表接收到消息:', event.data);
 
+                    // 处理从tab打开的情况（新消息格式）
+                    if (event.data.type === 'INIT_NODE_CODE') {
+                        const { nodeCode, nodeName } = event.data;
+                        console.log('收到nodeCode:', nodeCode, nodeName);
+
+                        // 保存节点信息
+                        window.currentNodeInfo.nodeId = nodeCode;
+                        window.currentNodeInfo.nodeName = nodeName;
+                        window.currentNodeInfo.nodeType = '明细报表';
+
+                        // 确保SDK已初始化
+                        if (!sdk) {
+                            sdk = await window.initializeSDK();
+                        }
+
+                        // 从SDK加载配置
+                        await loadConfigByNodeCode(nodeCode);
+                        return;
+                    }
+
+                    // 处理旧的消息格式（直接传递config）
                     // 保存节点信息用于保存
                     if (event.data.nodeId !== undefined) {
                         window.currentNodeInfo = {
@@ -521,6 +542,66 @@
                 }
             }
         });
+
+        /**
+         * 根据nodeCode从SDK加载配置
+         */
+        async function loadConfigByNodeCode(nodeCode) {
+            try {
+                console.log('开始加载nodeCode的配置:', nodeCode);
+
+                // 使用queryFormData查询配置
+                const params = {
+                    panelCode: 'IML_00001',
+                    condition: { code: nodeCode }
+                };
+
+                console.log('从SDK查询配置，参数:', params);
+                const result = await sdk.api.queryFormData(params);
+                console.log('SDK查询结果:', result);
+
+                if (result && result.state === '200' && result.data && result.data.list && result.data.list.length > 0) {
+                    const nodeData = result.data.list[0];
+                    if (nodeData.json) {
+                        try {
+                            const config = typeof nodeData.json === 'string' ? JSON.parse(nodeData.json) : nodeData.json;
+                            
+                            // 补充reportCode
+                            if (!config.reportCode) {
+                                config.reportCode = nodeCode;
+                            }
+
+                            // 保存配置
+                            window.currentNodeInfo.config = config;
+                            console.log('已加载配置:', config);
+
+                            // 应用配置到表格
+                            if (document.readyState === 'complete') {
+                                applyConfigToTable(config);
+                            } else {
+                                window.addEventListener('load', function() {
+                                    applyConfigToTable(config);
+                                });
+                            }
+                        } catch (e) {
+                            console.error('解析配置JSON失败:', e);
+                            // 新建报表时json可能为空，不弹窗
+                            console.warn('配置为空，使用默认空白配置');
+                        }
+                    } else {
+                        // 配置数据为空（新建报表），静默处理，使用空白配置
+                        console.log('配置数据为空（新建报表），使用空白配置');
+                    }
+                } else {
+                    // 查询失败或没有数据（新建报表），静默处理
+                    console.log('未查询到配置数据（新建报表），使用空白配置');
+                }
+            } catch (error) {
+                console.error('加载配置异常:', error);
+                // 新建报表时可能没有配置，不弹窗
+                console.warn('加载配置异常，使用空白配置');
+            }
+        }
 
         // 应用配置到表格
         function applyConfigToTable(config) {
@@ -630,6 +711,12 @@
                         option.textContent = displayName;
                         option.dataset.tableData = JSON.stringify(table);
                         tableSelect.appendChild(option);
+                        
+                        // 调试：输出表的完整结构
+                        if (tables.indexOf(table) === 0) {
+                            console.log('第一张表的完整数据结构:', table);
+                            console.log('表中的所有字段名:', Object.keys(table));
+                        }
                     });
 
                     console.log('表下拉框已更新，共' + tables.length + '张表');
@@ -791,6 +878,20 @@
 
             console.log('字段列表渲染完成，共' + fields.length + '个字段');
             console.log('window.allFields已更新:', window.allFields);
+            
+            // 字段列表加载完成后，更新表格中字段单元格的中文名
+            if (typeof updateFieldDisplayNames === 'function') {
+                setTimeout(() => {
+                    updateFieldDisplayNames();
+                }, 100);
+            }
+            
+            // 同时更新过滤字段的中文名
+            if (window.filterManager && typeof window.filterManager.updateFilterFieldLabels === 'function') {
+                setTimeout(() => {
+                    window.filterManager.updateFilterFieldLabels();
+                }, 150);
+            }
         }
 
         // 页面加载完成后初始化
@@ -853,6 +954,16 @@
                                         tableSelect.value = configToUse.selectedTable;
                                         console.log('已恢复表选择:', configToUse.selectedTable);
                                         loadFieldsByTable(configToUse.selectedTable);
+                                        
+                                        // 重要：恢复 selectedTableCode 到 window.currentNodeInfo.config
+                                        if (!window.currentNodeInfo) {
+                                            window.currentNodeInfo = {};
+                                        }
+                                        if (!window.currentNodeInfo.config) {
+                                            window.currentNodeInfo.config = {};
+                                        }
+                                        window.currentNodeInfo.config.selectedTableCode = configToUse.selectedTableCode || '';
+                                        console.log('已恢复表编号:', configToUse.selectedTableCode);
                                     }
                                 }
                             }
@@ -923,6 +1034,29 @@
                 console.log('选择表:', tableName);
 
                 if (tableName) {
+                    // 获取表的编号
+                    const selectedOption = e.target.options[e.target.selectedIndex];
+                    const tableData = selectedOption.dataset.tableData;
+                    let tableCode = null;
+                    
+                    console.log('选中的表数据:', tableData);
+                    
+                    if (tableData) {
+                        try {
+                            const tableObj = JSON.parse(tableData);
+                            console.log('解析后的表对象:', tableObj);
+                            console.log('表对象的所有字段:', Object.keys(tableObj));
+                            
+                            // 尝试多种可能的字段名
+                            tableCode = tableObj['编号'] || tableObj['code'] || tableObj['id'] || tableObj['Code'] || tableObj['ID'];
+                            console.log('提取的表编号:', tableCode);
+                        } catch (err) {
+                            console.error('解析表数据失败:', err);
+                        }
+                    } else {
+                        console.warn('selectedOption.dataset.tableData 为空');
+                    }
+
                     loadFieldsByTable(tableName);
                     // 清空之前选中的字段
                     window.selectedCols = [];
@@ -932,7 +1066,9 @@
                             window.currentNodeInfo.config = {};
                         }
                         window.currentNodeInfo.config.selectedTable = tableName;
-                        console.log('已保存表选择:', tableName);
+                        window.currentNodeInfo.config.selectedTableCode = tableCode || ''; // 保存表编号
+                        console.log('已保存表选择:', tableName, '表编号:', tableCode);
+                        console.log('当前配置:', window.currentNodeInfo.config);
                     }
                 } else {
                     document.getElementById('field-list-container').innerHTML =
