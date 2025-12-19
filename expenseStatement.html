@@ -496,13 +496,14 @@
 
                     // 处理从tab打开的情况（新消息格式）
                     if (event.data.type === 'INIT_NODE_CODE') {
-                        const { nodeCode, nodeName } = event.data;
-                        console.log('收到nodeCode:', nodeCode, nodeName);
+                        const { nodeCode, nodeName, parentCode } = event.data;
+                        console.log('收到nodeCode:', nodeCode, nodeName, 'parentCode:', parentCode);
 
                         // 保存节点信息
                         window.currentNodeInfo.nodeId = nodeCode;
                         window.currentNodeInfo.nodeName = nodeName;
                         window.currentNodeInfo.nodeType = '明细报表';
+                        window.currentNodeInfo.parentCode = parentCode || null;  // 保存目录ID
 
                         // 确保SDK已初始化
                         if (!sdk) {
@@ -562,6 +563,13 @@
 
                 if (result && result.state === '200' && result.data && result.data.list && result.data.list.length > 0) {
                     const nodeData = result.data.list[0];
+                    
+                    // 从nodeData中获取parentCode（如果postMessage没有传递）
+                    if (!window.currentNodeInfo.parentCode && nodeData.parentCode) {
+                        window.currentNodeInfo.parentCode = nodeData.parentCode;
+                        console.log('从SDK数据中获取parentCode:', nodeData.parentCode);
+                    }
+                    
                     if (nodeData.json) {
                         try {
                             const config = typeof nodeData.json === 'string' ? JSON.parse(nodeData.json) : nodeData.json;

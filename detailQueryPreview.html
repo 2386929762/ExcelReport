@@ -546,14 +546,14 @@
 				filterItem.appendChild(label);
 				filterItem.appendChild(select);
 			} else if (fieldInfo && fieldInfo['类型'] === '日期') {
-				// 日期类型字段，创建开始时间和结束时间选择器
+				// 日期类型字段，创建开始时间和结束时间选择器（仅日期选择）
 				filterItem.style.display = 'flex';
 				filterItem.style.alignItems = 'center';
 				filterItem.style.gap = '8px';
 
-				// 创建开始时间选择器
+				// 创建开始日期选择器
 				const startInput = document.createElement('input');
-				startInput.type = 'datetime-local';
+				startInput.type = 'date';
 				startInput.dataset.field = field.field;
 				startInput.dataset.table = field.table;
 				startInput.dataset.timeType = 'start';
@@ -563,9 +563,9 @@
 				startInput.style.borderRadius = '4px';
 				startInput.style.fontSize = '13px';
 
-				// 创建结束时间选择器
+				// 创建结束日期选择器
 				const endInput = document.createElement('input');
-				endInput.type = 'datetime-local';
+				endInput.type = 'date';
 				endInput.dataset.field = field.field;
 				endInput.dataset.table = field.table;
 				endInput.dataset.timeType = 'end';
@@ -666,7 +666,7 @@
 			if (!filterContainer) return [];
 
 			const timeFilters = [];
-			const dateInputs = filterContainer.querySelectorAll('input[type="datetime-local"]');
+			const dateInputs = filterContainer.querySelectorAll('input[type="date"]');
 			
 			console.log('找到的日期输入框数量:', dateInputs.length);
 			
@@ -685,8 +685,10 @@
 				
 				const value = input.value.trim();
 				if (value) {
-					// 将HTML5的datetime-local格式转换为 yyyy-MM-dd HH:mm:ss
-					const formattedValue = value.replace('T', ' ') + ':00';
+					// 将日期格式转换为 yyyy-MM-dd HH:mm:ss
+					// 开始时间追加 00:00:00，结束时间追加 23:59:59
+					const timeValue = timeType === 'start' ? ' 00:00:00' : ' 23:59:59';
+					const formattedValue = value + timeValue;
 					
 					if (timeType === 'start') {
 						fieldGroups.get(field).start = formattedValue;
@@ -789,8 +791,8 @@
 			// 收集字段映射
 			const { fieldMap, maxFieldRow } = collectFieldMapAndMaxRow(virtualDesignTable);
 
-			// 替换表头中的{fieldName}为中文名
-			replaceHeaderWithChineseNames(cloneTable, fieldMap, sdkData.left);
+			// 注释掉表头替换，查询页面数据直接从字段名行开始显示
+			// replaceHeaderWithChineseNames(cloneTable, fieldMap, sdkData.left);
 
 			// 应用合并信息（在数据填充之前）
 			if (config.cellMergeInfo) {
@@ -925,9 +927,11 @@
 				return;
 			}
 
+			console.log('===== fillTableWithSDKData 开始 =====');
 			console.log('字段映射:', left);
 			console.log('数据行数:', right.length);
 			console.log('选中的字段:', selectedCols);
+			console.log('maxFieldRow:', maxFieldRow);
 
 			// 建立字段名到列索引的映射
 			const fieldNameToIndex = {};
@@ -944,12 +948,16 @@
 				effectiveMaxFieldRow = cloneTable.rows.length - 1;
 			}
 
-			// 修复：数据应该插入到字段行之后
+			// 关键修改：数据从字段行开始填充，直接覆盖字段名
 			let insertIndexInTbody = 0;
 			if (effectiveMaxFieldRow >= theadRowCount) {
-				insertIndexInTbody = effectiveMaxFieldRow - theadRowCount + 1;
+				insertIndexInTbody = effectiveMaxFieldRow - theadRowCount; // 去掉+1，从字段行本身开始
 				if (insertIndexInTbody < 0) insertIndexInTbody = 0;
 			}
+
+			console.log('theadRowCount:', theadRowCount);
+			console.log('insertIndexInTbody:', insertIndexInTbody);
+			console.log('将从tbody的第', insertIndexInTbody, '行开始填充（0-based，会覆盖字段行）');
 
 			let templateRow = null;
 			if (cloneTbody.rows.length > 0) {
@@ -968,6 +976,9 @@
 
 				if (targetIndex < cloneTbody.rows.length) {
 					targetRow = cloneTbody.rows[targetIndex];
+					if (i === 0) {
+						console.log(`使用现有行 tbody[${targetIndex}]（这应该是字段行）`);
+					}
 				} else {
 					if (templateRow) {
 						targetRow = templateRow.cloneNode(true);
@@ -1003,13 +1014,21 @@
 						// 找到该字段在SDK返回数据中的位置
 						const dataIndex = fieldNameToIndex[mapping.fieldName];
 						if (dataIndex !== undefined && dataRow[dataIndex] !== undefined) {
-							td.textContent = dataRow[dataIndex];
+							const oldValue = td.textContent;
+							const newValue = dataRow[dataIndex];
+							td.textContent = newValue;
+							if (i === 0 && c >= 1 && c <= 3) {
+								console.log(`第1行数据: 列${c} "${oldValue}" -> "${newValue}"`);
+							}
 						} else {
 							td.textContent = '';
 						}
 					}
 				}
 			}
+			
+			console.log(`已填充 ${right.length} 行数据，从行索引 ${insertIndexInTbody} 开始`);
+			console.log('===== fillTableWithSDKData 完成 =====');
 		}
 
 		/**
@@ -1410,22 +1429,30 @@
 			if (!window.tableDataMap || !window.tableDataMap[tableName]) return;
 
 			const tableData = window.tableDataMap[tableName].data || [];
-			// 修复：正确计算表头行数 - 表头应该是字段单元格所在行及之前的所有行
-			const headerCount = maxFieldRow >= 0 ? (maxFieldRow + 1) : 0;
 			const cloneTbody = (cloneTable.tBodies && cloneTable.tBodies[0]) || cloneTable.createTBody();
+
+			console.log('===== fillTableData 开始 =====');
+			console.log('maxFieldRow:', maxFieldRow);
+			console.log('tbody当前行数:', cloneTbody.rows.length);
+			console.log('数据行数:', tableData.length);
 
 			let effectiveMaxFieldRow = maxFieldRow;
 			if (effectiveMaxFieldRow < 0) {
 				effectiveMaxFieldRow = cloneTable.rows.length - 1;
 			}
 
-			// 修复：数据应该插入到字段行之后，即从 maxFieldRow + 1 行开始
+			// 关键修改：数据从字段行开始填充，字段行本身显示第一行数据
+			// 不显示字段名，直接显示数据
 			let insertIndexInTbody = 0;
 			const theadRowCount = (cloneTable.tHead && cloneTable.tHead.rows.length) ? cloneTable.tHead.rows.length : 0;
 			if (effectiveMaxFieldRow >= theadRowCount) {
-				insertIndexInTbody = effectiveMaxFieldRow - theadRowCount + 1;
+				insertIndexInTbody = effectiveMaxFieldRow - theadRowCount;
 				if (insertIndexInTbody < 0) insertIndexInTbody = 0;
 			}
+
+			console.log('theadRowCount:', theadRowCount);
+			console.log('insertIndexInTbody:', insertIndexInTbody);
+			console.log('将从tbody的第', insertIndexInTbody, '行开始填充数据（0-based）');
 
 			let templateRow = null;
 			if (cloneTbody.rows.length > 0) {
@@ -1443,6 +1470,7 @@
 
 				if (targetIndex < cloneTbody.rows.length) {
 					targetRow = cloneTbody.rows[targetIndex];
+					console.log(`使用现有行 tbody[${targetIndex}]`);
 				} else {
 					if (templateRow) {
 						targetRow = templateRow.cloneNode(true);
@@ -1461,8 +1489,10 @@
 					} else {
 						cloneTbody.insertBefore(targetRow, cloneTbody.rows[targetIndex]);
 					}
+					console.log(`创建新行并插入到 tbody[${targetIndex}]`);
 				}
 
+				// 填充数据到该行，包括字段行（覆盖字段名）
 				for (let c = 0; c < colCount; c++) {
 					if (!targetRow.cells[c]) {
 						while (targetRow.cells.length <= c) {
@@ -1473,10 +1503,19 @@
 					const td = targetRow.cells[c];
 					const mapping = fieldMap.get(c);
 					if (mapping) {
-						td.textContent = dataItem[mapping.fieldName] !== undefined ? dataItem[mapping.fieldName] : '';
+						const oldValue = td.textContent;
+						const newValue = dataItem[mapping.fieldName] !== undefined ? dataItem[mapping.fieldName] : '';
+						// 直接用数据覆盖原有内容（包括字段名）
+						td.textContent = newValue;
+						if (i === 0) {
+							console.log(`第1行数据: 列${c} "${oldValue}" -> "${newValue}"`);
+						}
 					}
 				}
 			}
+			
+			console.log(`已填充 ${tableData.length} 行数据，从行索引 ${insertIndexInTbody} 开始`);
+			console.log('===== fillTableData 完成 =====');
 		}
 
 		/**
@@ -1497,15 +1536,10 @@
 			tbodies.forEach(tb => {
 				const rows = Array.from(tb.rows || []);
 				rows.forEach((row, rowIndex) => {
-					// 跳过第一行（列标题行），它的第一个单元格都是th
-					if (rowIndex === 0 && row.cells && row.cells.length > 0 && row.cells[0].tagName === 'TH') {
-						return;
-					}
-
 					// 只给有第一个单元格的行编号
 					if (row.cells && row.cells.length > 0) {
 						const firstCell = row.cells[0];
-						// 只有td类型的才编号（跳过th）
+						// 只有td类型的才编号（跳过th），包括第一行字段行
 						if (firstCell.tagName === 'TD') {
 							firstCell.textContent = (counter++).toString();
 						}
@@ -1513,7 +1547,7 @@
 				});
 			});
 
-			console.log(`已重新编号 ${counter - 1} 个数据行`);
+			console.log(`已重新编号 ${counter - 1} 个数据行（包含字段行）`);
 		}
 
 		/**
@@ -1865,7 +1899,8 @@
 					panelCode: 'IML_00003',
 					condition: {
 						code: tableCode
-					}
+					},
+					options: {"excludeFields":["表结构json"]}
 				};
 
 				const result = await sdk.api.queryFormData(params);

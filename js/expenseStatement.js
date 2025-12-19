@@ -794,9 +794,18 @@ async function callBackendSaveAPI(nodeInfo) {
         // 构建表单数据
         const formData = {
             "节点名": nodeInfo.nodeName,
-            "节点类型": nodeInfo.nodeType || "指标报表",
-            "parentCode": nodeInfo.parentCode || "000"
+            "节点类型": nodeInfo.nodeType || "指标报表"
         };
+
+        // 添加parentCode（如果没有则报错）
+        if (nodeInfo.parentCode) {
+            formData["parentCode"] = nodeInfo.parentCode;
+        } else {
+            console.warn('警告：parentCode未设置，报表可能保存到错误的目录');
+            // 如果确实没有parentCode，可以考虑提示用户或使用一个默认值
+            // 这里保持原有逻辑，使用默认值
+            formData["parentCode"] = "000";
+        }
 
         // 如果有编号，添加编号字段
         if (nodeInfo.nodeId) {

@@ -146,20 +146,34 @@
 
                 <div class="flex-1 overflow-y-auto">
                     <div v-if="allDirectories.length > 0" class="flex flex-col">
-                        <button v-for="dir in allDirectories" :key="dir['编号']"
-                            @click="switchDirectory(dir)"
-                            class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 transition-all text-left hover:bg-gray-50"
+                        <div v-for="dir in allDirectories" :key="dir['编号']"
+                            class="group relative flex items-center gap-2 px-4 py-3 border-b border-gray-100 transition-all hover:bg-gray-50"
                             :class="dir['编号'] === selectedDirId ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''">
-                            <i class="fa-regular fa-folder text-yellow-500 text-sm"></i>
-                            <span class="text-sm font-medium truncate flex-1" 
-                                :class="dir['编号'] === selectedDirId ? 'text-blue-700' : 'text-gray-700'">
-                                {{ dir['节点名'] }}
-                            </span>
-                            <span v-if="getDirectoryTabCount(dir['编号']) > 0" 
-                                class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                                {{ getDirectoryTabCount(dir['编号']) }}
-                            </span>
-                        </button>
+                            <button @click="switchDirectory(dir)"
+                                class="flex items-center gap-2 flex-1 text-left">
+                                <i class="fa-regular fa-folder text-yellow-500 text-sm"></i>
+                                <span class="text-sm font-medium truncate" 
+                                    :class="dir['编号'] === selectedDirId ? 'text-blue-700' : 'text-gray-700'">
+                                    {{ dir['节点名'] }}
+                                </span>
+                                <span v-if="getDirectoryTabCount(dir['编号']) > 0" 
+                                    class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                                    {{ getDirectoryTabCount(dir['编号']) }}
+                                </span>
+                            </button>
+                            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button @click.stop="openDirModal('rename', dir)"
+                                    class="p-1.5 text-xs rounded border border-gray-200 text-blue-600 hover:bg-blue-50 hover:border-blue-400 transition-colors"
+                                    title="编辑目录">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button @click.stop="deleteDirectory(dir)"
+                                    class="p-1.5 text-xs rounded border border-gray-200 text-red-600 hover:bg-red-50 hover:border-red-400 transition-colors"
+                                    title="删除目录">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     <div v-else class="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
                         <i class="fa-solid fa-folder-open text-3xl mb-2 opacity-50"></i>
@@ -197,7 +211,7 @@
                             <div class="flex items-center gap-3">
                                 <div class="relative">
                                     <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                                    <input v-model="searchKeyword" @input="resetToFirstPage" type="text" placeholder="搜索报表名称"
+                                    <input v-model="searchKeyword" @input="handleSearch" type="text" placeholder="搜索报表名称"
                                         class="pl-8 pr-3 py-1.5 text-sm border rounded-md bg-gray-50 focus:bg-white focus:border-blue-400 focus:outline-none"
                                         :disabled="!selectedDirId">
                                 </div>
@@ -216,20 +230,6 @@
                                 <i class="fa-solid fa-plus"></i>
                                 <span>新增报表</span>
                             </button>
-                            <div class="flex items-center gap-4">
-                                <button @click="openDirModal('add-child')" :disabled="!selectedDirId"
-                                    class="px-3 py-2 text-xs rounded border transition-colors flex items-center gap-1"
-                                    :class="!selectedDirId ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:text-blue-600'">
-                                    <i class="fa-solid fa-folder-tree"></i>
-                                    <span>新增子目录</span>
-                                </button>
-                                <button @click="openDirModal('rename')" :disabled="!selectedDirId"
-                                    class="px-3 py-2 text-xs rounded border transition-colors flex items-center gap-1"
-                                    :class="!selectedDirId ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:text-blue-600'">
-                                    <i class="fa-solid fa-pen"></i>
-                                    <span>重命名目录</span>
-                                </button>
-                            </div>
                         </div>
 
                         <div class="flex-1 overflow-y-auto">
@@ -292,7 +292,7 @@
                                     :class="(currentPage === totalPages || totalPages === 0) ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:text-blue-600'">
                                     <i class="fa-solid fa-chevron-right"></i>
                                 </button>
-                                <select v-model.number="pageSize" @change="resetToFirstPage"
+                                <select v-model.number="pageSize" @change="handlePageSizeChange"
                                     class="text-xs border rounded px-2 py-1 bg-white">
                                     <option :value="10">10/页</option>
                                     <option :value="20">20/页</option>
@@ -319,7 +319,7 @@
             <div class="bg-white rounded-lg shadow-xl w-full max-w-sm border border-gray-200">
                 <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                     <h3 class="text-sm font-semibold text-gray-800">
-                        {{ dirModalMode === 'rename' ? '重命名目录' : dirModalMode === 'add-child' ? '新增子目录' : '新增根目录' }}
+                        {{ dirModalMode === 'rename' ? '重命名目录' : '新增根目录' }}
                     </h3>
                     <button @click="showDirModal = false" class="text-gray-400 hover:text-gray-600">
                         <i class="fa-solid fa-xmark"></i>
@@ -331,8 +331,8 @@
                         <input v-model="dirForm.name" type="text" placeholder="请输入目录名称"
                             class="w-full border rounded px-3 py-2 text-sm focus:border-blue-400 focus:outline-none bg-gray-50">
                     </div>
-                    <div v-if="dirModalMode === 'add-child' || dirModalMode === 'rename'" class="text-xs text-gray-500 bg-gray-50 border rounded px-3 py-2">
-                        所属目录：{{ dirForm.parentCode || '根目录' }}
+                    <div v-if="dirModalMode === 'rename'" class="text-xs text-gray-500 bg-gray-50 border rounded px-3 py-2">
+                        当前目录：{{ selectedDir ? selectedDir['节点名'] : '' }}
                     </div>
                 </div>
                 <div class="px-4 py-3 border-t border-gray-100 flex justify-end gap-2">
@@ -603,6 +603,7 @@
                 const searchKeyword = ref('');
                 const currentPage = ref(1);
                 const pageSize = ref(10);
+                let searchDebounceTimer = null;
 
                 const showDirModal = ref(false);
                 const dirModalMode = ref('add-root');
@@ -619,7 +620,8 @@
                 const iframeRefs = ref({});
 
                 const allDirectories = computed(() => {
-                    return flatList.value.filter(n => n['节点类型'] === '目录');
+                    // 只显示第一层目录（没有parentCode的目录）
+                    return flatList.value.filter(n => n['节点类型'] === '目录' && !n.parentCode);
                 });
 
                 const treeData = computed(() => {
@@ -639,24 +641,15 @@
 
                 const selectedDir = computed(() => flatList.value.find(n => n['编号'] === selectedDirId.value));
 
-                const filteredReports = computed(() => {
-                    const keyword = searchKeyword.value.trim().toLowerCase();
-                    let reports = reportList.value;
-                    if (keyword) {
-                        reports = reports.filter(r => (r['节点名'] || '').toLowerCase().includes(keyword));
-                    }
-                    return reports;
-                });
-
-                const totalReports = computed(() => filteredReports.value.length);
+                // 因为改为服务端分页，reportList直接就是当前页的数据
+                const totalReports = ref(0);
                 const totalPages = computed(() => {
                     const pages = Math.ceil(totalReports.value / pageSize.value);
                     return pages > 0 ? pages : 1;
                 });
                 const paginatedReports = computed(() => {
-                    const start = (currentPage.value - 1) * pageSize.value;
-                    const end = start + pageSize.value;
-                    return filteredReports.value.slice(start, end);
+                    // 直接返回reportList，因为已经是分页后的数据
+                    return reportList.value;
                 });
 
                 const currentTabs = computed(() => {
@@ -688,9 +681,48 @@
                     return dirTabsMap.value[dirId]?.tabs?.length || 0;
                 };
 
-                const resetToFirstPage = () => { currentPage.value = 1; };
-                const prevPage = () => { if (currentPage.value > 1) currentPage.value -= 1; };
-                const nextPage = () => { if (currentPage.value < totalPages.value) currentPage.value += 1; };
+                const resetToFirstPage = () => { 
+                    currentPage.value = 1; 
+                    // 仅重置页码，不再自动加载，由refreshReports按钮触发加载
+                };
+                
+                // 搜索时使用防抖
+                const handleSearch = () => {
+                    currentPage.value = 1;
+                    if (searchDebounceTimer) {
+                        clearTimeout(searchDebounceTimer);
+                    }
+                    searchDebounceTimer = setTimeout(() => {
+                        if (selectedDirId.value) {
+                            loadReportsForDir(selectedDirId.value);
+                        }
+                    }, 500);
+                };
+                
+                // 改变页面大小时重置到第一页并立即查询
+                const handlePageSizeChange = () => {
+                    currentPage.value = 1;
+                    if (selectedDirId.value) {
+                        loadReportsForDir(selectedDirId.value);
+                    }
+                };
+                
+                const prevPage = () => { 
+                    if (currentPage.value > 1) {
+                        currentPage.value -= 1;
+                        if (selectedDirId.value) {
+                            loadReportsForDir(selectedDirId.value);
+                        }
+                    }
+                };
+                const nextPage = () => { 
+                    if (currentPage.value < totalPages.value) {
+                        currentPage.value += 1;
+                        if (selectedDirId.value) {
+                            loadReportsForDir(selectedDirId.value);
+                        }
+                    }
+                };
 
                 const loadData = async () => {
                     let finalData = [];
@@ -717,27 +749,41 @@
 
                 const loadReportsForDir = async (dirId) => {
                     if (!dirId) return;
+                    if (listLoading.value) return; // 防止重复加载
                     listLoading.value = true;
                     selectedReportId.value = null;
                     try {
                         let reports = [];
+                        let total = 0;
                         if (!sdk) sdk = await window.initializeSDK();
                         if (sdk && sdk.api) {
-                            const res = await sdk.api.queryFormDataList({
+                            const params = {
                                 panelCode: LIST_PANEL_CODE,
-                                pageNo: 1,
-                                pageSize: 500,
-                                condition: { parentCode: dirId }
-                            });
+                                condition: {
+                                    parentCode: dirId,
+                                    "节点类型": "明细报表"
+                                },
+                                keyword: searchKeyword.value.trim(),
+                                pageNo: currentPage.value,
+                                pageSize: pageSize.value
+                            };
+                            const res = await sdk.api.queryFormDataList(params);
                             if (res?.data?.list) {
-                                reports = res.data.list.filter(n => n['节点类型'] !== '目录');
+                                reports = res.data.list;
+                                total = res.data.totalSize || reports.length;
                             }
                         }
+
                         if (!reports || reports.length === 0) {
-                            reports = flatList.value.filter(n => n['parentCode'] === dirId && n['节点类型'] !== '目录');
+                            reports = flatList.value.filter(n => 
+                                n['parentCode'] === dirId && 
+                                n['节点类型'] === '明细报表'
+                            );
+                            total = reports.length;
                         }
+
                         reportList.value = reports;
-                        resetToFirstPage();
+                        totalReports.value = total;
                     } catch (e) {
                         console.error('加载报表失败:', e);
                     } finally {
@@ -745,22 +791,54 @@
                     }
                 };
 
-                const openDirModal = (mode) => {
+                const openDirModal = (mode, dir = null) => {
                     dirModalMode.value = mode;
                     if (mode === 'rename') {
-                        if (!selectedDir.value) return;
+                        const targetDir = dir || selectedDir.value;
+                        if (!targetDir) return;
                         dirForm.value = {
-                            name: selectedDir.value['节点名'],
-                            id: selectedDir.value['编号'],
-                            parentCode: selectedDir.value['parentCode']
+                            name: targetDir['节点名'],
+                            id: targetDir['编号'],
+                            parentCode: ''
                         };
-                    } else if (mode === 'add-child') {
-                        if (!selectedDir.value) return;
-                        dirForm.value = { name: '', id: '', parentCode: selectedDir.value['编号'] };
                     } else {
                         dirForm.value = { name: '', id: '', parentCode: '' };
                     }
                     showDirModal.value = true;
+                };
+
+                const deleteDirectory = async (dir) => {
+                    if (!dir) return;
+                    if (!confirm(`确定删除目录"${dir['节点名']}"吗？删除目录后，该目录下的所有报表也将被移除。`)) return;
+                    try {
+                        if (!sdk) sdk = await window.initializeSDK();
+                        const result = await sdk.api.callButton({
+                            panelCode: BUTTON_PANEL_CODE,
+                            buttonName: '删除',
+                            buttonParam: { rowCodes: [dir['编号']] }
+                        });
+
+                        if (result?.state === '200') {
+                            // 从flatList中移除
+                            const flatIdx = flatList.value.findIndex(n => n['编号'] === dir['编号']);
+                            if (flatIdx !== -1) flatList.value.splice(flatIdx, 1);
+                            
+                            // 如果删除的是当前选中的目录，清空选中状态
+                            if (selectedDirId.value === dir['编号']) {
+                                selectedDirId.value = null;
+                                reportList.value = [];
+                            }
+                            
+                            // 清除该目录的tabs
+                            if (dirTabsMap.value[dir['编号']]) {
+                                delete dirTabsMap.value[dir['编号']];
+                            }
+                        } else {
+                            throw new Error(result?.msg || '删除失败');
+                        }
+                    } catch (e) {
+                        alert('删除目录失败：' + e.message);
+                    }
                 };
 
                 const submitDirModal = async () => {
@@ -886,6 +964,7 @@
                     selectedReportId.value = null;
                     searchKeyword.value = '';
                     currentPage.value = 1;
+                    totalReports.value = 0;
                     await loadReportsForDir(node['编号']);
                 };
 
@@ -998,7 +1077,8 @@
                             const message = {
                                 type: 'INIT_NODE_CODE',
                                 nodeCode: tab.nodeCode,
-                                nodeName: tab.name
+                                nodeName: tab.name,
+                                parentCode: selectedDirId.value  // 传递当前目录ID
                             };
                             iframe.contentWindow.postMessage(message, '*');
                             console.log('发送nodeCode到编辑页面iframe:', message);
@@ -1063,6 +1143,8 @@
                     prevPage,
                     nextPage,
                     resetToFirstPage,
+                    handleSearch,
+                    handlePageSizeChange,
                     refreshTree,
                     refreshReports,
                     showDirModal,
@@ -1070,6 +1152,7 @@
                     dirForm,
                     openDirModal,
                     submitDirModal,
+                    deleteDirectory,
                     showReportModal,
                     reportModalMode,
                     reportForm,

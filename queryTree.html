@@ -143,7 +143,7 @@
                             <div class="flex items-center gap-3">
                                 <div class="relative">
                                     <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                                    <input v-model="searchKeyword" @input="resetToFirstPage" type="text" placeholder="搜索报表名称"
+                                    <input v-model="searchKeyword" @input="handleSearch" type="text" placeholder="搜索报表名称"
                                         class="pl-8 pr-3 py-1.5 text-sm border rounded-md bg-gray-50 focus:bg-white focus:border-blue-400 focus:outline-none"
                                         :disabled="!selectedDirId">
                                 </div>
@@ -200,7 +200,7 @@
                                     :class="(currentPage === totalPages || totalPages === 0) ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:text-blue-600'">
                                     <i class="fa-solid fa-chevron-right"></i>
                                 </button>
-                                <select v-model.number="pageSize" @change="resetToFirstPage"
+                                <select v-model.number="pageSize" @change="handlePageSizeChange"
                                     class="text-xs border rounded px-2 py-1 bg-white">
                                     <option :value="10">10/页</option>
                                     <option :value="20">20/页</option>
@@ -257,6 +257,7 @@
                 const searchKeyword = ref('');
                 const currentPage = ref(1);
                 const pageSize = ref(10);
+                let searchDebounceTimer = null;
 
                 // Tab管理：{ [dirId]: { activeTab: string, tabs: [{id, name, url, nodeCode}] } }
                 const dirTabsMap = ref({});
@@ -273,24 +274,15 @@
                     return flatList.value.find(n => n['编号'] === selectedDirId.value);
                 });
 
-                const filteredReports = computed(() => {
-                    const keyword = searchKeyword.value.trim().toLowerCase();
-                    let reports = reportList.value;
-                    if (keyword) {
-                        reports = reports.filter(r => (r['节点名'] || '').toLowerCase().includes(keyword));
-                    }
-                    return reports;
-                });
-
-                const totalReports = computed(() => filteredReports.value.length);
+                // 因为改为服务端分页，reportList直接就是当前页的数据
+                const totalReports = ref(0);
                 const totalPages = computed(() => {
                     const pages = Math.ceil(totalReports.value / pageSize.value);
                     return pages > 0 ? pages : 1;
                 });
                 const paginatedReports = computed(() => {
-                    const start = (currentPage.value - 1) * pageSize.value;
-                    const end = start + pageSize.value;
-                    return filteredReports.value.slice(start, end);
+                    // 直接返回reportList，因为已经是分页后的数据
+                    return reportList.value;
                 });
 
                 const currentTabs = computed(() => {
@@ -324,14 +316,46 @@
 
                 const resetToFirstPage = () => {
                     currentPage.value = 1;
+                    // 仅重置页码，不再自动加载
+                };
+                
+                // 搜索时使用防抖
+                const handleSearch = () => {
+                    currentPage.value = 1;
+                    if (searchDebounceTimer) {
+                        clearTimeout(searchDebounceTimer);
+                    }
+                    searchDebounceTimer = setTimeout(() => {
+                        if (selectedDirId.value) {
+                            loadReportsForDir(selectedDirId.value);
+                        }
+                    }, 500);
+                };
+                
+                // 改变页面大小时重置到第一页并立即查询
+                const handlePageSizeChange = () => {
+                    currentPage.value = 1;
+                    if (selectedDirId.value) {
+                        loadReportsForDir(selectedDirId.value);
+                    }
                 };
 
                 const prevPage = () => {
-                    if (currentPage.value > 1) currentPage.value -= 1;
+                    if (currentPage.value > 1) {
+                        currentPage.value -= 1;
+                        if (selectedDirId.value) {
+                            loadReportsForDir(selectedDirId.value);
+                        }
+                    }
                 };
 
                 const nextPage = () => {
-                    if (currentPage.value < totalPages.value) currentPage.value += 1;
+                    if (currentPage.value < totalPages.value) {
+                        currentPage.value += 1;
+                        if (selectedDirId.value) {
+                            loadReportsForDir(selectedDirId.value);
+                        }
+                    }
                 };
 
                 // --- Data Loading ---
@@ -362,30 +386,41 @@
 
                 const loadReportsForDir = async (dirId) => {
                     if (!dirId) return;
+                    if (listLoading.value) return; // 防止重复加载
                     listLoading.value = true;
                     try {
                         let reports = [];
+                        let total = 0;
                         if (!sdk) sdk = await window.initializeSDK();
                         if (sdk && sdk.api) {
-                            const res = await sdk.api.queryFormDataList({
+                            const params = {
                                 panelCode: LIST_PANEL_CODE,
-                                pageNo: 1,
-                                pageSize: 500,
                                 condition: {
-                                    parentCode: dirId
-                                }
-                            });
+                                    parentCode: dirId,
+                                    "节点类型": "明细报表"
+                                },
+                                keyword: searchKeyword.value.trim(),
+                                pageNo: currentPage.value,
+                                pageSize: pageSize.value
+                            };
+                            const res = await sdk.api.queryFormDataList(params);
                             if (res?.data?.list) {
-                                reports = res.data.list.filter(n => n['节点类型'] !== '目录');
+                                reports = res.data.list;
+                                total = res.data.totalSize || reports.length;
                             }
                         }
 
                         if (!reports || reports.length === 0) {
-                            reports = flatList.value.filter(n => n['parentCode'] === dirId && n['节点类型'] !== '目录');
+                            reports = flatList.value.filter(n => 
+                                n['parentCode'] === dirId && 
+                                n['节点类型'] === '明细报表'
+                            );
+                            total = reports.length;
                         }
 
                         reportList.value = reports;
-                        resetToFirstPage();
+                        totalReports.value = total;
+                        // 不重置页码，因为现在是真实分页
                     } catch (e) {
                         console.error('加载报表失败:', e);
                     } finally {
@@ -398,6 +433,7 @@
                     selectedDirId.value = dir['编号'];
                     searchKeyword.value = '';
                     currentPage.value = 1;
+                    totalReports.value = 0;
                     
                     // 初始化当前目录的tabs结构
                     if (!dirTabsMap.value[dir['编号']]) {
@@ -562,6 +598,8 @@
                     prevPage,
                     nextPage,
                     resetToFirstPage,
+                    handleSearch,
+                    handlePageSizeChange,
                     refreshTree,
                     refreshReports,
                     getDirectoryTabCount,
